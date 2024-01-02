@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {BtcMarketPlace} from "../src/swap/Btc_Marketplace.sol";
+import {OrdMarketplace} from "../src/swap/Ord_Marketplace.sol";
 import {MarketPlace} from "../src/swap/Marketplace.sol";
 import {TestLightRelay} from "../src/relay/TestLightRelay.sol";
 
@@ -14,7 +15,10 @@ contract MarketplaceScript is Script {
         address forwarder = vm.envAddress("FORWARDER_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
-        BtcMarketPlace btcMarketplace = new BtcMarketPlace(new TestLightRelay(), forwarder);
+
+        TestLightRelay relay = new TestLightRelay();
+        BtcMarketPlace btcMarketplace = new BtcMarketPlace(relay, forwarder);
+        OrdMarketplace ordMarketplace = new OrdMarketplace(relay);
         MarketPlace marketplace = new MarketPlace(forwarder);
 
         vm.stopBroadcast();

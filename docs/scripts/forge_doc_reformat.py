@@ -7,6 +7,18 @@ Therefore, run this script after running the `forge doc --out docs/docs/contract
 import os
 import re
 
+# Function to replace GitHub source URLs with the 'master' branch
+def replace_git_sources(md_content):
+    def replace_source(match):
+        original_url = match.group(0)
+        # Capture the commit hash or tag using a group in the regular expression
+        commit_hash = match.group(1)
+        replaced_url = original_url.replace(f'/blob/{commit_hash}/', '/blob/master/')
+        return replaced_url
+
+    # Updated regular expression to capture the commit hash or tag
+    return re.sub(r'https://github.com/.+?/blob/([a-f0-9]+?)/.+?$', replace_source, md_content, flags=re.MULTILINE)
+
 # Function to parse the Inherits line in the Markdown content
 def parse_inherits(md_content):
     inherits_match = re.search(r'\*\*Inherits:\*\*\s*([\s\S]*?)\n', md_content)
@@ -38,6 +50,8 @@ def process_md_file(file_path):
     if inherits:
         modified_inherits = replace_paths_with_empty_brackets(inherits)
         md_content = md_content.replace(inherits, modified_inherits)
+
+    md_content = replace_git_sources(md_content)
 
     # Write the modified content back to the original file
     with open(file_path, 'w') as file:
