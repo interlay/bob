@@ -95,12 +95,15 @@ contract BitcoinTxTest is Test {
         BitcoinTx.ensureTxInputSpendsUtxo(inputVector, utxo);
     }
 
-    // Panic: [FAIL. Reason: panic: array out-of-bounds access (0x32)]
-    //    function test_ensureTxInputSpendsUtxoEmptyBytes() public {
-    //        bytes memory inputVector = new bytes(0);
-    //        BitcoinTx.UTXO memory utxo;
-    //        BitcoinTx.ensureTxInputSpendsUtxo(inputVector,utxo);
-    //    }
+    function test_ensureTxInputSpendsUtxoEmptyBytes() public {
+        bytes memory inputVector = new bytes(0);
+        BitcoinTx.UTXO memory utxo;
+        (bool success,) = address(this).call(
+            abi.encodeWithSignature("ensureTxInputSpendsUtxo(bytes memory,BitcoinTx.UTXO memory)", inputVector, utxo)
+        );
+        // Panic: [FAIL. Reason: panic: array out-of-bounds access (0x32)]
+        assertFalse(success);
+    }
 
     //
     // end ensureTxInputSpendsUtxo
@@ -144,22 +147,30 @@ contract BitcoinTxTest is Test {
         );
     }
 
-    // Panic: [FAIL. Reason: panic: array out-of-bounds access (0x32)]
-    //    function test_getTxOutputValueEmptyBytes() public {
-    //        bytes memory emptyBytes = new bytes(0);
-    //        uint64 value = BitcoinTx.getTxOutputValue(
-    //            keccak256(hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"),
-    //            emptyBytes
-    //        );
-    //    }
+    function test_getTxOutputValueEmptyBytes() public {
+        bytes memory emptyBytes = new bytes(0);
+        (bool success,) = address(this).call(
+            abi.encodeWithSignature(
+                "getTxOutputValue(bytes32,bytes memory)",
+                keccak256(hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"),
+                emptyBytes
+            )
+        );
+        // Reason: panic: array out-of-bounds access (0x32)
+        assertFalse(success);
+    }
 
-    // [FAIL. Reason: EvmError: OutOfGas]
-    //    function test_getTxOutputValueWithInvalidInput() public {
-    //        uint64 value = BitcoinTx.getTxOutputValue(
-    //            keccak256(hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"),
-    //            hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"
-    //        );
-    //    }
+    function test_getTxOutputValueWithInvalidInput() public {
+        (bool success,) = address(this).call(
+            abi.encodeWithSignature(
+                "getTxOutputValue(bytes32,bytes memory)",
+                keccak256(hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"),
+                hex"16001493adab0a7a8cb7675db135c9c97e81942025c2c9"
+            )
+        );
+        // [FAIL. Reason: EvmError: OutOfGas] (gas: 9223372036854754743)
+        assertFalse(success);
+    }
 
     //
     // end getTxOutputValue
