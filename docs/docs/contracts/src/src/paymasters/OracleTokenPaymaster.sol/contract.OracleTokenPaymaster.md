@@ -1,5 +1,5 @@
 # OracleTokenPaymaster
-[Git Source](https://github.com/bob-collective/bob/blob/1194535b4647e398705fbc746acbe74734ab42fb/src/paymasters/OracleTokenPaymaster.sol)
+[Git Source](https://github.com/bob-collective/bob/blob/master/src/paymasters/OracleTokenPaymaster.sol)
 
 **Inherits:**
 BasePaymaster

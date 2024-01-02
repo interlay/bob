@@ -1,5 +1,5 @@
 # Bridge
-[Git Source](https://github.com/bob-collective/bob/blob/1194535b4647e398705fbc746acbe74734ab42fb/src/swap/Bridge.sol)
+[Git Source](https://github.com/bob-collective/bob/blob/master/src/swap/Bridge.sol)
 
 **Inherits:**
 ERC2771Recipient

@@ -1,5 +1,5 @@
 # LightRelay
-[Git Source](https://github.com/bob-collective/bob/blob/1194535b4647e398705fbc746acbe74734ab42fb/src/relay/LightRelay.sol)
+[Git Source](https://github.com/bob-collective/bob/blob/master/src/relay/LightRelay.sol)
 
 **Inherits:**
 Ownable, [ILightRelay](../../relay/LightRelay.sol/interface.ILightRelay.md)

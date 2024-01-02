@@ -1,5 +1,5 @@
 # IOracle
-[Git Source](https://github.com/bob-collective/bob/blob/1194535b4647e398705fbc746acbe74734ab42fb/src/paymasters/Oracle.sol)
+[Git Source](https://github.com/bob-collective/bob/blob/master/src/paymasters/Oracle.sol)
 
 
 ## Functions
