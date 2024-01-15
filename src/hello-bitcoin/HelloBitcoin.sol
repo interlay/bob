@@ -7,6 +7,7 @@ import {BitcoinTx} from "../bridge/BitcoinTx.sol";
 import {IRelay} from "../bridge/IRelay.sol";
 import {TestLightRelay} from "../relay/TestLightRelay.sol";
 import {BridgeState} from "../bridge/BridgeState.sol";
+import "forge-std/console.sol";
 
 using SafeERC20 for IERC20;
 
@@ -28,7 +29,7 @@ contract HelloBitcoin {
     /**
      * @dev The address of the USDT (Tether) ERC-20 contract.
      */
-    address public usdtContractAddress;
+    IERC20 public usdtContractAddress;
 
     /**
      * @dev Counter for generating unique identifiers for BTC to USDT swap orders.
@@ -102,7 +103,7 @@ contract HelloBitcoin {
         relay.relay = _relay;
         relay.txProofDifficultyFactor = 1;
         testLightRelay = TestLightRelay(address(relay.relay));
-        usdtContractAddress = setUsdtContractAddress;
+        usdtContractAddress = IERC20(setUsdtContractAddress);
     }
 
     /**
