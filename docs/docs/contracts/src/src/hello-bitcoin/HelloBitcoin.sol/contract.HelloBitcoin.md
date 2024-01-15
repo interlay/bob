@@ -24,33 +24,34 @@ mapping(uint256 => OrdinalSellOrder) public ordinalSellOrders;
 
 
 ### usdtContractAddress
-*The address of the USDT (Tether) ERC-20 contract.*
+*The address of the ERC-20 contract. You can use this variable for any ERC-20 token,
+not just USDT (Tether). Make sure to set this to the appropriate ERC-20 contract address.*
 
 
 ```solidity
-address public usdtContractAddress;
+IERC20 public usdtContractAddress;
 ```
 
 
-### nextOrderId
+### nextBtcOrderId
 *Counter for generating unique identifiers for BTC to USDT swap orders.
-The `nextOrderId` is incremented each time a new BTC to USDT swap order is created,
+The `nextBtcOrderId` is incremented each time a new BTC to USDT swap order is created,
 ensuring that each order has a unique identifier.*
 
 
 ```solidity
-uint256 nextOrderId;
+uint256 nextBtcOrderId;
 ```
 
 
-### nextOrdinalId
+### nextOrdinalOrderId
 *Counter for generating unique identifiers for ordinal sell orders.
-The `nextOrdinalId` is incremented each time a new ordinal sell order is created,
+The `nextOrdinalOrderId` is incremented each time a new ordinal sell order is created,
 ensuring that each ordinal order has a unique identifier.*
 
 
 ```solidity
-uint256 nextOrdinalId;
+uint256 nextOrdinalOrderId;
 ```
 
 
@@ -75,14 +76,14 @@ TestLightRelay internal testLightRelay;
 
 
 ```solidity
-constructor(IRelay _relay, address setUsdtContractAddress);
+constructor(IRelay _relay, address _usdtContractAddress);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`_relay`|`IRelay`|The relay contract implementing the IRelay interface.|
-|`setUsdtContractAddress`|`address`|The address of the usdt contract.|
+|`_usdtContractAddress`|`address`|The address of the usdt contract.|
 
 
 ### setRelay
@@ -100,29 +101,29 @@ function setRelay(IRelay _relay) internal;
 |`_relay`|`IRelay`|The relay contract implementing the IRelay interface.|
 
 
-### swapBtcForUsdt
+### placeBtcSellOrder
 
 *Initiates a BTC to USDT swap order.*
 
 
 ```solidity
-function swapBtcForUsdt(uint256 sellAmountBtc, uint256 buyAmountUsdt) public;
+function placeBtcSellOrder(uint256 sellAmountBtc, uint256 buyAmount) public;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`sellAmountBtc`|`uint256`|The amount of BTC to sell.|
-|`buyAmountUsdt`|`uint256`|The amount of USDT to buy.|
+|`buyAmount`|`uint256`|The amount of USDT to buy.|
 
 
-### acceptBtcToUsdtSwap
+### acceptBtcSellOrder
 
 *Accepts a BTC to USDT swap order.*
 
 
 ```solidity
-function acceptBtcToUsdtSwap(uint256 id, BitcoinAddress calldata bitcoinAddress) public;
+function acceptBtcSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public;
 ```
 **Parameters**
 
@@ -132,14 +133,13 @@ function acceptBtcToUsdtSwap(uint256 id, BitcoinAddress calldata bitcoinAddress)
 |`bitcoinAddress`|`BitcoinAddress`|The Bitcoin address of the buyer.|
 
 
-### proofBtcSendtoDestination
+### completeBtcSellOrder
 
 *Completes the BTC to USDT swap by validating the BTC transaction proof and transfer USDT to the seller.*
 
 
 ```solidity
-function proofBtcSendtoDestination(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
-    public;
+function completeBtcSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof) public;
 ```
 **Parameters**
 
@@ -150,13 +150,13 @@ function proofBtcSendtoDestination(uint256 id, BitcoinTx.Info calldata transacti
 |`proof`|`BitcoinTx.Proof`|Proof of the BTC transaction's inclusion in the Bitcoin blockchain.|
 
 
-### swapOrdinalToUsdt
+### placeOrdinalSellOrder
 
 *Initiates an ordinal sell order for swapping Ordinal to USDT.*
 
 
 ```solidity
-function swapOrdinalToUsdt(OrdinalId calldata ordinalID, BitcoinTx.UTXO calldata utxo, uint256 buyAmountUsdt) public;
+function placeOrdinalSellOrder(OrdinalId calldata ordinalID, BitcoinTx.UTXO calldata utxo, uint256 buyAmount) public;
 ```
 **Parameters**
 
@@ -164,16 +164,16 @@ function swapOrdinalToUsdt(OrdinalId calldata ordinalID, BitcoinTx.UTXO calldata
 |----|----|-----------|
 |`ordinalID`|`OrdinalId`|The unique identifier for the ordinal sell order.|
 |`utxo`|`BitcoinTx.UTXO`|The UTXO (Unspent Transaction Output) associated with the inscription.|
-|`buyAmountUsdt`|`uint256`|The amount of USDT to buy.|
+|`buyAmount`|`uint256`|The amount of USDT to buy.|
 
 
-### acceptOrdinalToUsdtSwap
+### acceptOrdinalSellOrder
 
 *Accepts an ordinal sell order for swapping Oridinal to USDT.*
 
 
 ```solidity
-function acceptOrdinalToUsdtSwap(uint256 id, BitcoinAddress calldata bitcoinAddress) public;
+function acceptOrdinalSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public;
 ```
 **Parameters**
 
@@ -183,7 +183,7 @@ function acceptOrdinalToUsdtSwap(uint256 id, BitcoinAddress calldata bitcoinAddr
 |`bitcoinAddress`|`BitcoinAddress`|The Bitcoin address of the buyer.|
 
 
-### proofOrdinalSendtoDestination
+### completeOrdinalSellOrder
 
 *Completes the ordinal sell order by validating the BTC transaction proof,
 ensuring that the BTC transaction input spends the specified UTXO associated with the ordinal sell order,
@@ -191,7 +191,7 @@ and transfer USDT to the seller.*
 
 
 ```solidity
-function proofOrdinalSendtoDestination(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
+function completeOrdinalSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
     public;
 ```
 **Parameters**
@@ -226,40 +226,40 @@ function _checkBitcoinTxOutput(
 
 
 ## Events
-### swapBtcForUsdtEvent
+### btcSellOrderSuccessfullyPlaced
 
 ```solidity
-event swapBtcForUsdtEvent(uint256 indexed orderId, uint256 sellAmountBtc, uint256 buyAmountUsdt);
+event btcSellOrderSuccessfullyPlaced(uint256 indexed orderId, uint256 sellAmountBtc, uint256 buyAmount);
 ```
 
-### acceptBtcToUsdtSwapEvent
+### btcSellOrderBtcSellOrderAccepted
 
 ```solidity
-event acceptBtcToUsdtSwapEvent(uint256 indexed id, BitcoinAddress bitcoinAddress);
+event btcSellOrderBtcSellOrderAccepted(uint256 indexed id, BitcoinAddress bitcoinAddress);
 ```
 
-### proofBtcSendtoDestinationEvent
+### btcSuccessfullySendtoDestination
 
 ```solidity
-event proofBtcSendtoDestinationEvent(uint256 id);
+event btcSuccessfullySendtoDestination(uint256 id);
 ```
 
-### swapOrdinalToUsdtEvent
+### ordinalSellOrderSuccessfullyPlaced
 
 ```solidity
-event swapOrdinalToUsdtEvent(uint256 indexed id, OrdinalId ordinalID, uint256 buyAmountUsdt);
+event ordinalSellOrderSuccessfullyPlaced(uint256 indexed id, OrdinalId ordinalID, uint256 buyAmount);
 ```
 
-### acceptOrdinalToUsdtSwapEvent
+### ordinalSellOrderBtcSellOrderAccepted
 
 ```solidity
-event acceptOrdinalToUsdtSwapEvent(uint256 indexed id, BitcoinAddress bitcoinAddress);
+event ordinalSellOrderBtcSellOrderAccepted(uint256 indexed id, BitcoinAddress bitcoinAddress);
 ```
 
-### proofOrdinalSellOrderEvent
+### ordinalSuccessfullySendtoDestination
 
 ```solidity
-event proofOrdinalSellOrderEvent(uint256 id);
+event ordinalSuccessfullySendtoDestination(uint256 id);
 ```
 
 ## Structs
@@ -270,7 +270,7 @@ event proofOrdinalSellOrderEvent(uint256 id);
 ```solidity
 struct BtcSellOrder {
     uint256 sellAmountBtc;
-    uint256 buyAmountUsdt;
+    uint256 buyAmount;
     address btcSeller;
     BitcoinAddress btcBuyer;
     bool isOrderAccepted;
@@ -278,17 +278,17 @@ struct BtcSellOrder {
 ```
 
 ### OrdinalSellOrder
-*Struct representing an ordinal sell order for swapping BTC to USDT.*
+*Struct representing an ordinal sell order for swapping Ordinal to USDT.*
 
 
 ```solidity
 struct OrdinalSellOrder {
     OrdinalId ordinalID;
-    uint256 buyAmountUsdt;
+    uint256 buyAmount;
     BitcoinTx.UTXO utxo;
     address ordinalSeller;
-    bool isOrderAccepted;
     BitcoinAddress ordinalBuyer;
+    bool isOrderAccepted;
 }
 ```
 
