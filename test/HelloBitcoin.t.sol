@@ -53,19 +53,19 @@ contract HelloBitcoinTest is HelloBitcoin, Test {
 
         vm.startPrank(alice);
         vm.expectEmit();
-        emit swapBtcForUsdtEvent(0, 1000, 10);
-        this.swapBtcForUsdt(1000, 10);
+        emit btcSellOrderSuccessfullyPlaced(0, 1000, 10);
+        this.placeBtcSellOrder(1000, 10);
 
         vm.startPrank(bob);
         usdtToken.approve(address(this), 1000);
         vm.expectEmit();
-        emit acceptBtcToUsdtSwapEvent(0, dummyBitcoinAddress());
-        this.acceptBtcToUsdtSwap(0, dummyBitcoinAddress());
+        emit btcSellOrderBtcSellOrderAccepted(0, dummyBitcoinAddress());
+        this.acceptBtcSellOrder(0, dummyBitcoinAddress());
 
         vm.startPrank(alice);
         vm.expectEmit();
-        emit proofBtcSendtoDestinationEvent(0);
-        this.proofBtcSendtoDestination(0, utils.dummyTransaction(), utils.dummyProof());
+        emit btcSuccessfullySendtoDestination(0);
+        this.completeBtcSellOrder(0, utils.dummyTransaction(), utils.dummyProof());
     }
 
     function test_ordinalSellOrderFullFlow() public {
@@ -78,19 +78,19 @@ contract HelloBitcoinTest is HelloBitcoin, Test {
         // swapOrdinalToUsdt by alice
         vm.startPrank(alice);
         vm.expectEmit();
-        emit swapOrdinalToUsdtEvent(0, id, 100);
-        this.swapOrdinalToUsdt(id, utxo, 100);
+        emit ordinalSellOrderSuccessfullyPlaced(0, id, 100);
+        this.placeOrdinalSellOrder(id, utxo, 100);
 
         // acceptOrdinalToUsdtSwap by bob
         vm.startPrank(bob);
         usdtToken.approve(address(this), 100);
         vm.expectEmit();
-        emit acceptOrdinalToUsdtSwapEvent(0, dummyOrdinalBitcoinAddress());
-        this.acceptOrdinalToUsdtSwap(0, dummyOrdinalBitcoinAddress());
+        emit ordinalSellOrderBtcSellOrderAccepted(0, dummyOrdinalBitcoinAddress());
+        this.acceptOrdinalSellOrder(0, dummyOrdinalBitcoinAddress());
 
         vm.startPrank(alice);
         vm.expectEmit();
-        emit proofOrdinalSellOrderEvent(0);
-        this.proofOrdinalSendtoDestination(0, info, proof);
+        emit ordinalSuccessfullySendtoDestination(0);
+        this.completeOrdinalSellOrder(0, info, proof);
     }
 }
