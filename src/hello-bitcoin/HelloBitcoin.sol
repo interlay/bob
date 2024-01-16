@@ -15,13 +15,13 @@ contract HelloBitcoin {
     using BitcoinTx for BridgeState.Storage;
 
     /**
-     * @dev Mapping to store BTC to USDT swap orders based on their unique identifiers.
+     * @dev Mapping to store BTC to USDT (or other ERC20) swap orders based on their unique identifiers.
      * Each order is associated with a unique ID, and the order details are stored in the BtcSellOrder struct.
      */
     mapping(uint256 => BtcSellOrder) public btcSellOrders;
 
     /**
-     * @dev Mapping to store ordinal sell orders for swapping BTC to USDT based on their unique identifiers.
+     * @dev Mapping to store ordinal sell orders for swapping BTC to USDT (or other ERC20) based on their unique identifiers.
      * Each ordinal sell order is associated with a unique ID, and the order details are stored in the OrdinalSellOrder struct.
      */
     mapping(uint256 => OrdinalSellOrder) public ordinalSellOrders;
@@ -96,11 +96,13 @@ contract HelloBitcoin {
     TestLightRelay internal testLightRelay;
 
     /**
-     * @dev Constructor to initialize the contract with the relay and ERC2771 forwarder.
+     * @dev Constructor to initialize the contract with the relay and ERC20 token address.
      * @param _relay The relay contract implementing the IRelay interface.
-     * @param _usdtContractAddress The address of the usdt contract.
+     * @param _usdtContractAddress The address of the USDT contract.
+     *
+     * Additional functionalities of the relay can be found in the documentation available at:
+     * https://docs.gobob.xyz/docs/contracts/src/src/relay/LightRelay.sol/contract.LightRelay
      */
-    // ToDo: add some link to the docs
     constructor(IRelay _relay, address _usdtContractAddress) {
         relay.relay = _relay;
         relay.txProofDifficultyFactor = 1;
@@ -117,9 +119,13 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Initiates a BTC to USDT swap order.
+     * @notice Places a BTC sell order in the contract.
+     * @dev Emits a `btcSellOrderSuccessfullyPlaced` event upon successful placement.
      * @param sellAmountBtc The amount of BTC to sell.
-     * @param buyAmount The amount of USDT to buy.
+     * @param buyAmount The corresponding amount to be received in exchange for the BTC.
+     * @dev Requirements:
+     *   - `sellAmountBtc` must be greater than 0.
+     *   - `buyAmount` must be greater than 0.
      */
     function placeBtcSellOrder(uint256 sellAmountBtc, uint256 buyAmount) public {
         require(sellAmountBtc > 0, "Sell amount must be greater than 0");
@@ -138,9 +144,14 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Accepts a BTC to USDT swap order.
-     * @param id The ID of the BTC to USDT swap order.
-     * @param bitcoinAddress The Bitcoin address of the buyer.
+     * @notice Accepts a BTC sell order, providing the Bitcoin address for the buyer.
+     * @dev Transfers the corresponding currency from the buyer to the contract and updates the order details.
+     * @param id The unique identifier of the BTC sell order.
+     * @param bitcoinAddress The Bitcoin address of the buyer to receive the BTC.
+     * @dev Requirements:
+     *   - The specified order must not have been accepted previously.
+     *   - The buyer must transfer the required currency amount to the contract.
+     * @dev Emits a `btcSellOrderBtcSellOrderAccepted` event upon successful acceptance.
      */
     function acceptBtcSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public {
         BtcSellOrder storage placedOrder = btcSellOrders[id];
@@ -157,10 +168,21 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Completes the BTC to USDT swap by validating the BTC transaction proof and transfer USDT to the seller.
-     * @param id The ID of the BTC to USDT swap order.
-     * @param transaction Information about the BTC transaction.
-     * @param proof Proof of the BTC transaction's inclusion in the Bitcoin blockchain.
+     * @notice Completes a BTC sell order by validating and processing the provided Bitcoin transaction proof.
+     * @dev This function is intended to be called by the original seller.
+     * @param id The unique identifier of the BTC sell order.
+     * @param transaction Information about the Bitcoin transaction.
+     * @param proof Proof associated with the Bitcoin transaction.
+     * @dev Requirements:
+     *   - The specified order must have been previously accepted.
+     *   - The caller must be the original seller of the BTC.
+     *   - The Bitcoin transaction proof must be valid.
+     *   - The BTC transaction output must match the expected amount and recipient.
+     * @dev Effects:
+     *   - Sets the relay difficulty based on the Bitcoin headers in the proof.
+     *   - Transfers the locked USDT amount to the original seller.
+     *   - Removes the order from the mapping after successful processing.
+     * @dev Emits a `btcSuccessfullySendtoDestination` event upon successful completion.
      */
     function completeBtcSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
         public
@@ -192,10 +214,15 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Initiates an ordinal sell order for swapping Ordinal to USDT.
-     * @param ordinalID The unique identifier for the ordinal sell order.
-     * @param utxo The UTXO (Unspent Transaction Output) associated with the inscription.
-     * @param buyAmount The amount of USDT to buy.
+     * @notice Places an ordinal sell order in the contract.
+     * @dev Emits an `ordinalSellOrderSuccessfullyPlaced` event upon successful placement.
+     * @param ordinalID The unique identifier for the ordinal.
+     * @param utxo Information about the Bitcoin UTXO associated with the ordinal.
+     * @param buyAmount The amount to be received in exchange for the ordinal.
+     * @dev Requirements:
+     *   - `buyAmount` must be greater than 0.
+     * @dev Effects:
+     *   - Creates a new ordinal sell order with the provided details.
      */
     function placeOrdinalSellOrder(OrdinalId calldata ordinalID, BitcoinTx.UTXO calldata utxo, uint256 buyAmount)
         public
@@ -217,9 +244,17 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Accepts an ordinal sell order for swapping Oridinal to USDT.
-     * @param id The ID of the ordinal sell order.
-     * @param bitcoinAddress The Bitcoin address of the buyer.
+     * @notice Accepts an ordinal sell order, providing the Bitcoin address for the buyer.
+     * @dev Transfers the corresponding currency from the buyer to the contract and updates the order details.
+     * @param id The unique identifier of the ordinal sell order.
+     * @param bitcoinAddress The Bitcoin address of the buyer to receive the ordinal.
+     * @dev Requirements:
+     *   - The specified order must not have been accepted previously.
+     *   - The buyer must transfer the required currency amount to this contract.
+     * @dev Effects:
+     *   - "Locks" the selling token by transferring it to the contract.
+     *   - Updates the ordinal sell order with the buyer's Bitcoin address and marks the order as accepted.
+     * @dev Emits an `ordinalSellOrderBtcSellOrderAccepted` event upon successful acceptance.
      */
     function acceptOrdinalSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public {
         OrdinalSellOrder storage placedOrder = ordinalSellOrders[id];
@@ -235,12 +270,25 @@ contract HelloBitcoin {
     }
 
     /**
-     * @dev Completes the ordinal sell order by validating the BTC transaction proof,
-     * ensuring that the BTC transaction input spends the specified UTXO associated with the ordinal sell order,
-     * and transfer USDT to the seller.
-     * @param id The ID of the ordinal sell order.
-     * @param transaction Information about the BTC transaction.
-     * @param proof Proof of the BTC transaction's inclusion in the Bitcoin blockchain.
+     * @notice Completes an ordinal sell order by validating and processing the provided Bitcoin transaction proof.
+     * @dev This function is intended to be called by the original seller.
+     * @param id The unique identifier of the ordinal sell order.
+     * @param transaction Information about the Bitcoin transaction.
+     * @param proof Proof associated with the Bitcoin transaction.
+     * @dev Requirements:
+     *   - The specified order must have been previously accepted.
+     *   - The caller must be the original seller of the ordinal.
+     *   - The Bitcoin transaction proof must be valid.
+     *   - The BTC transaction input must spend the specified UTXO associated with the ordinal sell order.
+     *   - The BTC transaction output must be to the buyer's address.
+     * @dev Effects:
+     *   - Sets the relay difficulty based on the Bitcoin headers in the proof.
+     *   - Validates the BTC transaction proof using the relay.
+     *   - Ensures that the BTC transaction input spends the specified UTXO.
+     *   - Checks the BTC transaction output to the buyer's address.
+     *   - Transfers the locked USDT amount to the original seller.
+     *   - Removes the ordinal sell order from storage after successful processing.
+     * @dev Emits an `ordinalSuccessfullySendtoDestination` event upon successful completion.
      */
     function completeOrdinalSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
         public
