@@ -19,5 +19,5 @@ If you are keen to build on BOB or contribute to BOB itself:
 - Discuss ideas and share feedback on the [forum](https://forum.gobob.xyz/)
 - Join the [Dev Telegram](https://t.me/+CyIcLW2nfaFlNDc1)
 - Checkout the [bob-collective GitHub](https://github.com/bob-collective/bob)
-- Deploy your first contracts on BOB: [Hello World](/docs/build/getting-started/helloworld)
+- Deploy your first contracts on BOB: [Hello World](/docs/build/getting-started/hellobitcoin)
 - Try out the demos: [Demos](/docs/build/getting-started/#examples)
