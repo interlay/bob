@@ -55,42 +55,51 @@ library RelayUtils {
     }
 }
 
-/// @dev THE RELAY MUST NOT BE USED BEFORE GENESIS AND AT LEAST ONE RETARGET.
+/// @title LightRelay Contract
+/// @dev The LightRelay contract manages a relay for Bitcoin header information,
+/// allowing retargeting and validation of header chains.
+/// THE RELAY MUST NOT BE USED BEFORE GENESIS AND AT LEAST ONE RETARGET.
 contract LightRelay is Ownable, ILightRelay {
     using BytesLib for bytes;
     using BTCUtils for bytes;
     using ValidateSPV for bytes;
     using RelayUtils for bytes;
 
+    /// @notice Flag indicating whether the relay is ready for use.
     bool public ready;
     // Whether the relay requires the address submitting a retarget to be
     // authorised in advance by governance.
+    /// @notice Flag indicating whether authorization is required for retarget submitters.
     bool public authorizationRequired;
-    // Number of blocks required for each side of a retarget proof:
-    // a retarget must provide `proofLength` blocks before the retarget
+    /// @notice Number of blocks required for each side of a retarget proof.
+    // A retarget must provide `proofLength` blocks before the retarget
     // and `proofLength` blocks after it.
     // Governable
     // Should be set to a fairly high number (e.g. 20-50) in production.
     uint64 public proofLength;
-    // The number of the first epoch recorded by the relay.
+    /// @notice The number of the first epoch recorded by the relay.
     // This should equal the height of the block starting the genesis epoch,
     // divided by 2016, but this is not enforced as the relay has no
     // information about block numbers.
     uint64 public genesisEpoch;
-    // The number of the latest epoch whose difficulty is proven to the relay.
+    /// @notice The number of the latest epoch whose difficulty is proven to the relay.
     // If the genesis epoch's number is set correctly, and retargets along the
     // way have been legitimate, this equals the height of the block starting
     // the most recent epoch, divided by 2016.
     uint64 public currentEpoch;
 
+    /// @notice Difficulty of the current epoch.
     uint256 internal currentEpochDifficulty;
+    /// @notice Difficulty of the previous epoch.
     uint256 internal prevEpochDifficulty;
 
-    // Each epoch from genesis to the current one, keyed by their numbers.
+    /// @notice Mapping of each epoch from genesis to the current one, keyed by their numbers.
     mapping(uint256 => Epoch) internal epochs;
 
+    /// @notice Mapping of authorized submitters.
     mapping(address => bool) public isAuthorized;
 
+    /// @notice Modifier to check if the relay is active.
     modifier relayActive() {
         require(ready, "Relay is not ready for use");
         _;

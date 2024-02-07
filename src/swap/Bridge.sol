@@ -82,7 +82,7 @@ contract Bridge is ERC2771Recipient {
         delete orders[id];
     }
 
-    function executeSwap(uint256 id, TransactionProof calldata transactionProof) public {
+    function executeSwap(uint256 id, TransactionProof calldata /* transactionProof */ ) public {
         // todo: check proof
 
         // move the zbtc thta was locked to whoever accepted the order

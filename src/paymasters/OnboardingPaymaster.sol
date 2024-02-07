@@ -29,23 +29,23 @@ contract OnboardingPaymaster is BasePaymaster {
         gasUsedByPost = _gasUsedByPost;
     }
 
-    function _getPaymasterData(bytes memory paymasterData) private returns (IERC20 token, uint256 maxTokens) {
+    function _getPaymasterData(bytes memory paymasterData) private pure returns (IERC20 token, uint256 maxTokens) {
         (address tokenAddress, uint256 _maxTokens) = abi.decode(paymasterData, (address, uint256));
 
         maxTokens = _maxTokens;
         token = IERC20(tokenAddress);
     }
 
-    function getSelector(bytes calldata call) public view returns (uint32) {
+    function getSelector(bytes calldata call) public pure returns (uint32) {
         uint32 ret = uint32(bytes4(call[0:4]));
         return ret;
     }
 
     function _preRelayedCall(
         GsnTypes.RelayRequest calldata relayRequest,
-        bytes calldata signature,
-        bytes calldata approvalData,
-        uint256 maxPossibleGas
+        bytes calldata, /* signature*/
+        bytes calldata, /* approvalData*/
+        uint256 /* maxPossibleGas */
     ) internal virtual override returns (bytes memory context, bool revertOnRecipientRevert) {
         require(relayRequest.request.to == whitelistedContract, "Recipient is not whitelisted");
 
@@ -61,8 +61,8 @@ contract OnboardingPaymaster is BasePaymaster {
     function _postRelayedCall(
         bytes calldata context,
         bool,
-        uint256 gasUseWithoutPost,
-        GsnTypes.RelayData calldata relayData
+        uint256, /* gasUseWithoutPost */
+        GsnTypes.RelayData calldata /* relayData */
     ) internal virtual override {
         address from = abi.decode(context, (address));
         emit PostRelay(from);

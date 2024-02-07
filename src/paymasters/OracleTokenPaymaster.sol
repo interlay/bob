@@ -86,7 +86,7 @@ contract OracleTokenPaymaster is BasePaymaster {
         return relayRequest.request.from;
     }
 
-    function _getPaymasterData(bytes memory paymasterData) private returns (IERC20 token, uint256 maxTokens) {
+    function _getPaymasterData(bytes memory paymasterData) private pure returns (IERC20 token, uint256 maxTokens) {
         (address tokenAddress, uint256 _maxTokens) = abi.decode(paymasterData, (address, uint256));
 
         maxTokens = _maxTokens;
@@ -95,6 +95,7 @@ contract OracleTokenPaymaster is BasePaymaster {
 
     function _calculatePreCharge(IERC20 token, GsnTypes.RelayRequest calldata relayRequest, uint256 maxPossibleGas)
         internal
+        view
         returns (address payer, uint256 ethPrecharge, uint256 tokenPreCharge)
     {
         payer = this.getPayer(relayRequest);
@@ -113,14 +114,14 @@ contract OracleTokenPaymaster is BasePaymaster {
         bytes calldata signature,
         bytes calldata approvalData,
         uint256 maxPossibleGas
-    ) public returns (bytes memory context, bool revertOnRecipientRevert) {
+    ) public {
         _preRelayedCall(relayRequest, signature, approvalData, maxPossibleGas);
     }
 
     function _preRelayedCall(
         GsnTypes.RelayRequest calldata relayRequest,
-        bytes calldata signature,
-        bytes calldata approvalData,
+        bytes calldata, /* signature */
+        bytes calldata, /* approvalData */
         uint256 maxPossibleGas
     ) internal virtual override returns (bytes memory context, bool revertOnRecipientRevert) {
         (IERC20 token, uint256 maxTokens) = _getPaymasterData(relayRequest.relayData.paymasterData);

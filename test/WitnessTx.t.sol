@@ -61,7 +61,7 @@ contract WitnessTxTest is Test {
         assertEq(coinbaseWitnessCommitment, witnessCommitment);
     }
 
-    function test_ValidateWitnessProof() public {
+    function test_ValidateWitnessProof() public view {
         WitnessTx.validateWitnessProof(
             WitnessTx.WitnessInfo({
                 info: BitcoinTx.Info({

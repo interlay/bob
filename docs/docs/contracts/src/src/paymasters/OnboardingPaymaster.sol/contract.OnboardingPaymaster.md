@@ -53,38 +53,35 @@ function setPostGasUsage(uint256 _gasUsedByPost) external onlyOwner;
 
 
 ```solidity
-function _getPaymasterData(bytes memory paymasterData) private returns (IERC20 token, uint256 maxTokens);
+function _getPaymasterData(bytes memory paymasterData) private pure returns (IERC20 token, uint256 maxTokens);
 ```
 
 ### getSelector
 
 
 ```solidity
-function getSelector(bytes calldata call) public view returns (uint32);
+function getSelector(bytes calldata call) public pure returns (uint32);
 ```
 
 ### _preRelayedCall
 
 
 ```solidity
-function _preRelayedCall(
-    GsnTypes.RelayRequest calldata relayRequest,
-    bytes calldata signature,
-    bytes calldata approvalData,
-    uint256 maxPossibleGas
-) internal virtual override returns (bytes memory context, bool revertOnRecipientRevert);
+function _preRelayedCall(GsnTypes.RelayRequest calldata relayRequest, bytes calldata, bytes calldata, uint256)
+    internal
+    virtual
+    override
+    returns (bytes memory context, bool revertOnRecipientRevert);
 ```
 
 ### _postRelayedCall
 
 
 ```solidity
-function _postRelayedCall(
-    bytes calldata context,
-    bool,
-    uint256 gasUseWithoutPost,
-    GsnTypes.RelayData calldata relayData
-) internal virtual override;
+function _postRelayedCall(bytes calldata context, bool, uint256, GsnTypes.RelayData calldata)
+    internal
+    virtual
+    override;
 ```
 
 ## Events

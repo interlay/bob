@@ -18,7 +18,7 @@ int256 public price;
 
 
 ```solidity
-function decimals() external view returns (uint8);
+function decimals() external pure returns (uint8);
 ```
 
 ### latestRoundData

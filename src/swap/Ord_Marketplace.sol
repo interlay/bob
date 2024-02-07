@@ -154,6 +154,7 @@ contract OrdMarketplace {
      */
     function _checkBitcoinTxOutput(BitcoinAddress storage bitcoinAddress, BitcoinTx.Info calldata transaction)
         private
+        view
     {
         // Prefixes scriptpubkey with its size to match script output data.
         bytes32 scriptPubKeyHash =

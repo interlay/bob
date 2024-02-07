@@ -4,11 +4,15 @@
 **Inherits:**
 Ownable, [ILightRelay](../../relay/LightRelay.sol/interface.ILightRelay.md)
 
-*THE RELAY MUST NOT BE USED BEFORE GENESIS AND AT LEAST ONE RETARGET.*
+*The LightRelay contract manages a relay for Bitcoin header information,
+allowing retargeting and validation of header chains.
+THE RELAY MUST NOT BE USED BEFORE GENESIS AND AT LEAST ONE RETARGET.*
 
 
 ## State Variables
 ### ready
+Flag indicating whether the relay is ready for use.
+
 
 ```solidity
 bool public ready;
@@ -16,6 +20,8 @@ bool public ready;
 
 
 ### authorizationRequired
+Flag indicating whether authorization is required for retarget submitters.
+
 
 ```solidity
 bool public authorizationRequired;
@@ -23,6 +29,8 @@ bool public authorizationRequired;
 
 
 ### proofLength
+Number of blocks required for each side of a retarget proof.
+
 
 ```solidity
 uint64 public proofLength;
@@ -30,6 +38,8 @@ uint64 public proofLength;
 
 
 ### genesisEpoch
+The number of the first epoch recorded by the relay.
+
 
 ```solidity
 uint64 public genesisEpoch;
@@ -37,6 +47,8 @@ uint64 public genesisEpoch;
 
 
 ### currentEpoch
+The number of the latest epoch whose difficulty is proven to the relay.
+
 
 ```solidity
 uint64 public currentEpoch;
@@ -44,6 +56,8 @@ uint64 public currentEpoch;
 
 
 ### currentEpochDifficulty
+Difficulty of the current epoch.
+
 
 ```solidity
 uint256 internal currentEpochDifficulty;
@@ -51,6 +65,8 @@ uint256 internal currentEpochDifficulty;
 
 
 ### prevEpochDifficulty
+Difficulty of the previous epoch.
+
 
 ```solidity
 uint256 internal prevEpochDifficulty;
@@ -58,6 +74,8 @@ uint256 internal prevEpochDifficulty;
 
 
 ### epochs
+Mapping of each epoch from genesis to the current one, keyed by their numbers.
+
 
 ```solidity
 mapping(uint256 => Epoch) internal epochs;
@@ -65,6 +83,8 @@ mapping(uint256 => Epoch) internal epochs;
 
 
 ### isAuthorized
+Mapping of authorized submitters.
+
 
 ```solidity
 mapping(address => bool) public isAuthorized;
@@ -73,6 +93,8 @@ mapping(address => bool) public isAuthorized;
 
 ## Functions
 ### relayActive
+
+Modifier to check if the relay is active.
 
 
 ```solidity

@@ -94,7 +94,9 @@ Reverts if bitcoin address is not found.
 
 
 ```solidity
-function _checkBitcoinTxOutput(BitcoinAddress storage bitcoinAddress, BitcoinTx.Info calldata transaction) private;
+function _checkBitcoinTxOutput(BitcoinAddress storage bitcoinAddress, BitcoinTx.Info calldata transaction)
+    private
+    view;
 ```
 **Parameters**
 

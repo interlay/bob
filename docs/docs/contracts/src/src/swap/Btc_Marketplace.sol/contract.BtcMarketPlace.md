@@ -193,7 +193,7 @@ function _checkBitcoinTxOutput(
     uint256 expectedBtcAmount,
     BitcoinAddress storage bitcoinAddress,
     BitcoinTx.Info calldata transaction
-) private;
+) private view;
 ```
 **Parameters**
 

@@ -169,7 +169,7 @@ contract OrdMarketPlaceTest is OrdMarketplace, Test {
             emit acceptOrdinalSellOrderEvent(
                 expectedPlaceId, expectedAcceptId, ordinalsInfo[i].requester, address(token1), 100
             );
-            uint256 acceptId = this.acceptOrdinalSellOrder(expectedPlaceId, ordinalsInfo[i].requester);
+            this.acceptOrdinalSellOrder(expectedPlaceId, ordinalsInfo[i].requester);
             assertEq(expectedAcceptId, expectedAcceptId);
 
             // proofOrdinalSellOrder
@@ -300,8 +300,9 @@ contract OrdMarketPlaceTest is OrdMarketplace, Test {
         this.placeOrdinalSellOrder(ordinalsInfo[0].id, ordinalsInfo[1].utxo, address(token1), 100);
         this.withdrawOrdinalSellOrder(0);
 
-        (OrdinalSellOrder[] memory _ordinalOrders, uint256[] memory ids) = this.getOpenOrdinalSellOrders();
-        // there should be no order ids
+        (, uint256[] memory ids) = this.getOpenOrdinalSellOrders();
+
+        // there should be no order  ids
         assertEq(ids.length, 0);
     }
 
@@ -338,8 +339,7 @@ contract OrdMarketPlaceTest is OrdMarketplace, Test {
         vm.warp(block.timestamp + REQUEST_EXPIRATION_SECONDS + 1);
         vm.startPrank(bob);
         this.cancelAcceptedOrdinalSellOrder(1);
-        (AcceptedOrdinalSellOrder[] memory _ordinalAcceptedOrders, uint256[] memory ids) =
-            this.getOpenAcceptedOrdinalSellOrders();
+        (, uint256[] memory ids) = this.getOpenAcceptedOrdinalSellOrders();
         // there should be no order ids
         assertEq(ids.length, 0);
     }

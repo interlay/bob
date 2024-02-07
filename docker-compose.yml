@@ -1,7 +1,7 @@
 version: "3.8"
 services:
     bitcoind:
-        image: "ruimarinho/bitcoin-core:24"
+        image: "lightninglabs/bitcoin-core:25"
         command:
             - -regtest
             - -server
@@ -15,7 +15,7 @@ services:
             - "18443:18443"
 
     bitcoin-cli:
-        image: "ruimarinho/bitcoin-core:24"
+        image: "lightninglabs/bitcoin-core:25"
         command:
             - /bin/sh
             - -c

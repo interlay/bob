@@ -5,23 +5,30 @@ sidebar_position: 2
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-# Hello World
+# Hello Bitcoin
 
 This guide provides step-by-step instructions on how to deploy smart contracts on BOB.
 
 We will provide instructions for using Remix and Foundry.
 
+- [Developer Starter Kit](https://github.com/bob-collective/StarterKit) the kit serves as the foundation to develop on BOB.
 - [Remix](https://remix.ethereum.org/) is a web-based IDE for writing smart contracts. This is a great option if you do not want to install any software on your computer.
 - [Foundry](https://book.getfoundry.sh/) is a Rust-based development environment for writing smart contracts. This is a great option if you want to use a local development environment.
 
-## Coin Contract
+## HelloBitcoin Contract
+
+### Overview of the contract
+
+- The contract integrates the [BTC relay](/docs/contracts/src/src/relay/LightRelay.sol/contract.LightRelay) to enable seamless communication between the Bitcoin blockchain and the BOB testnet.
+- The contract allows swapping between BTC->USDT and Ordinal->USDT using the BTC relay on testnet.
+
 
 ### Objectives
 
 - **Set up a development environment**: Learn how to set up a development environment for your BOB smart contract development.
-- **Create a Smart Contract for BOB**: We will use the a [simple example contract to create a token](https://docs.soliditylang.org/en/v0.8.21/introduction-to-smart-contracts.html#subcurrency-example) smart contract.
-- **Compile a Smart Contract for BOB**: Compile your token smart contract using the development environment.
-- **Deploy a Smart Contract to BOB**: Deploy your compiled token smart contract to the BOB platform.
+- **Create a Smart Contract for BOB**: We will use [HelloBitcoin smart contract](https://github.com/bob-collective/StarterKit/blob/main/src/HelloBitcoin.sol) present in the developer kit.
+- **Compile a Smart Contract for BOB**: Compile your HelloBitcoin smart contract using the development environment.
+- **Deploy a Smart Contract to BOB**: Deploy your compiled smart contract to the BOB platform.
 - **Interact with a Smart Contract Deployed on BOB**: Learn how to interact with the smart contract you've deployed on the BOB platform.
 
 ### Prerequisites
@@ -44,91 +51,451 @@ Follow the steps from the [foundry book](https://book.getfoundry.sh/getting-star
   </TabItem>
 </Tabs>
 
-### Creating the Coin Contract
+### Creating the HelloBitcoin Contract
 
 <Tabs groupId="dev-env">
   <TabItem value="remix" label="Remix">
 
-Create a new project with Remix. Under `contracts` folder create a new file `Coin.sol`.
+Create a new project with Remix. Under `contracts` folder create a new file `HelloBitcoin.sol`.
+
+Add the following remappings in `compiler_config.json` under `settings`
+
+```json
+{
+  "language": "Solidity",
+  "settings": {
+      "optimizer": {
+          "enabled": true,
+          "runs": 200
+    },
+    "outputSelection": {
+          "*": {
+          "": ["ast"],
+          "*": ["abi", "metadata", "devdoc", "userdoc", "storageLayout", "evm.legacyAssembly", "evm.bytecode", "evm.deployedBytecode", "evm.methodIdentifiers", "evm.gasEstimates", "evm.assembly"]
+        }
+    },
+    "remappings":[
+      "@openzeppelin/contracts/=https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.5.0/contracts/",
+      "@bob-collective/bitcoin-spv/=https://github.com/bob-collective/bitcoin-spv/blob/master/src/",
+      "@bob-collective/bob/=https://github.com/bob-collective/bob/blob/master/src/"
+    ]
+  }
+}
+```
+Enter the below code in `HelloBitcoin.sol` file.
+
+To learn more about the Solidity contracts in general [checkout the Solidity tutorial guide](https://docs.soliditylang.org/en/v0.8.21/introduction-to-smart-contracts.html#subcurrency-example).
+
+```solidity
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {BTCUtils} from "@bob-collective/bitcoin-spv/BTCUtils.sol";
+import {BitcoinTx} from "@bob-collective/bob/bridge/BitcoinTx.sol";
+import {IRelay} from "@bob-collective/bob/bridge/IRelay.sol";
+import {TestLightRelay} from "@bob-collective/bob/relay/TestLightRelay.sol";
+import {BridgeState} from "@bob-collective/bob/bridge/BridgeState.sol";
+
+using SafeERC20 for IERC20;
+
+contract HelloBitcoin {
+  using BitcoinTx for BridgeState.Storage;
+
+  /**
+   * @dev Mapping to store BTC to USDT (or other ERC20) swap orders based on their unique identifiers.
+   * Each order is associated with a unique ID, and the order details are stored in the BtcSellOrder struct.
+   */
+  mapping(uint256 => BtcSellOrder) public btcSellOrders;
+
+  /**
+   * @dev Mapping to store ordinal sell orders for swapping BTC to USDT (or other ERC20) based on their unique identifiers.
+   * Each ordinal sell order is associated with a unique ID, and the order details are stored in the OrdinalSellOrder struct.
+   */
+  mapping(uint256 => OrdinalSellOrder) public ordinalSellOrders;
+
+  /**
+   * @dev The address of the ERC-20 contract. You can use this variable for any ERC-20 token,
+   * not just USDT (Tether). Make sure to set this to the appropriate ERC-20 contract address.
+   */
+  IERC20 public usdtContractAddress;
+
+  /**
+   * @dev Counter for generating unique identifiers for BTC to USDT swap orders.
+   * The `nextBtcOrderId` is incremented each time a new BTC to USDT swap order is created,
+   * ensuring that each order has a unique identifier.
+   */
+  uint256 nextBtcOrderId;
+
+  /**
+   * @dev Counter for generating unique identifiers for ordinal sell orders.
+   * The `nextOrdinalOrderId` is incremented each time a new ordinal sell order is created,
+   * ensuring that each ordinal order has a unique identifier.
+   */
+  uint256 nextOrdinalOrderId;
+
+  /**
+   * @dev Struct representing a BTC to USDT swap order.
+   */
+  struct BtcSellOrder {
+      uint256 sellAmountBtc; // Amount of BTC to be sold in the order.
+      uint256 buyAmount; // Amount of USDT (or other ERC20) to be bought in the order.
+      address btcSeller; // Address of the seller initiating the order.
+      BitcoinAddress btcBuyer; // Bitcoin address of the buyer (initialized with an empty scriptPubKey).
+      bool isOrderAccepted; // Flag indicating whether the order has been accepted.
+  }
+
+  /**
+   * @dev Struct representing an ordinal sell order for swapping Ordinal to USDT.
+   */
+  struct OrdinalSellOrder {
+      OrdinalId ordinalID; // Unique identifier for the ordinal sell order.
+      uint256 buyAmount; // Amount of USDT (or other ERC20) to be bought in the order.
+      BitcoinTx.UTXO utxo; // UTXO associated with the BTC to USDT swap order.
+      address ordinalSeller; // Address of the seller initiating the ordinal order.
+      BitcoinAddress ordinalBuyer; // Bitcoin address of the buyer (initialized with an empty scriptPubKey).
+      bool isOrderAccepted; // Flag indicating whether the ordinal order has been accepted.
+  }
+
+  /**
+   * @dev Struct representing a unique identifier for an ordinal sell order.
+   */
+  struct OrdinalId {
+      bytes32 txId; // Transaction ID associated with the ordinal order.
+      uint32 index; // Index associated with the ordinal order.
+  }
+
+  /**
+   * @dev Struct representing a Bitcoin address with a scriptPubKey.
+   */
+  struct BitcoinAddress {
+      bytes scriptPubKey; // Script public key associated with the Bitcoin address.
+  }
+
+  event btcSellOrderSuccessfullyPlaced(uint256 indexed orderId, uint256 sellAmountBtc, uint256 buyAmount);
+  event btcSellOrderBtcSellOrderAccepted(uint256 indexed id, BitcoinAddress bitcoinAddress);
+  event btcSuccessfullySendtoDestination(uint256 id);
+
+  event ordinalSellOrderSuccessfullyPlaced(uint256 indexed id, OrdinalId ordinalID, uint256 buyAmount);
+  event ordinalSellOrderBtcSellOrderAccepted(uint256 indexed id, BitcoinAddress bitcoinAddress);
+  event ordinalSuccessfullySendtoDestination(uint256 id);
+
+  BridgeState.Storage internal relay;
+  TestLightRelay internal testLightRelay;
+
+  /**
+   * @dev Constructor to initialize the contract with the relay and ERC20 token address.
+   * @param _relay The relay contract implementing the IRelay interface.
+   * @param _usdtContractAddress The address of the USDT contract.
+   *
+   * Additional functionalities of the relay can be found in the documentation available at:
+   * https://docs.gobob.xyz/docs/contracts/src/src/relay/LightRelay.sol/contract.LightRelay
+   */
+  constructor(IRelay _relay, address _usdtContractAddress) {
+      relay.relay = _relay;
+      relay.txProofDifficultyFactor = 1;
+      testLightRelay = TestLightRelay(address(relay.relay));
+      usdtContractAddress = IERC20(_usdtContractAddress);
+  }
+
+  /**
+   * @dev Set the relay contract for the bridge.
+   * @param _relay The relay contract implementing the IRelay interface.
+   */
+  function setRelay(IRelay _relay) internal {
+      relay.relay = _relay;
+  }
+
+  /**
+   * @notice Places a BTC sell order in the contract.
+   * @dev Emits a `btcSellOrderSuccessfullyPlaced` event upon successful placement.
+   * @param sellAmountBtc The amount of BTC to sell.
+   * @param buyAmount The corresponding amount to be received in exchange for the BTC.
+   * @dev Requirements:
+   *   - `sellAmountBtc` must be greater than 0.
+   *   - `buyAmount` must be greater than 0.
+   */
+  function placeBtcSellOrder(uint256 sellAmountBtc, uint256 buyAmount) public {
+      require(sellAmountBtc > 0, "Sell amount must be greater than 0");
+      require(buyAmount > 0, "Buy amount must be greater than 0");
+
+      uint256 id = nextBtcOrderId++;
+      btcSellOrders[id] = BtcSellOrder({
+          sellAmountBtc: sellAmountBtc,
+          buyAmount: buyAmount,
+          btcSeller: msg.sender,
+          btcBuyer: BitcoinAddress({scriptPubKey: new bytes(0)}),
+          isOrderAccepted: false
+      });
+
+      emit btcSellOrderSuccessfullyPlaced(id, sellAmountBtc, buyAmount);
+  }
+
+  /**
+   * @notice Accepts a BTC sell order, providing the Bitcoin address for the buyer.
+   * @dev Transfers the corresponding currency from the buyer to the contract and updates the order details.
+   * @param id The unique identifier of the BTC sell order.
+   * @param bitcoinAddress The Bitcoin address of the buyer to receive the BTC.
+   * @dev Requirements:
+   *   - The specified order must not have been accepted previously.
+   *   - The buyer must transfer the required currency amount to the contract.
+   * @dev Emits a `btcSellOrderBtcSellOrderAccepted` event upon successful acceptance.
+   */
+  function acceptBtcSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public {
+      BtcSellOrder storage placedOrder = btcSellOrders[id];
+
+      require(placedOrder.isOrderAccepted == false, "Order has already been accepted");
+
+      // "lock" selling token by transferring to contract
+      IERC20(usdtContractAddress).safeTransferFrom(msg.sender, address(this), placedOrder.buyAmount);
+
+      placedOrder.btcBuyer = bitcoinAddress;
+      placedOrder.isOrderAccepted = true;
+
+      emit btcSellOrderBtcSellOrderAccepted(id, bitcoinAddress);
+  }
+
+  /**
+   * @notice Completes a BTC sell order by validating and processing the provided Bitcoin transaction proof.
+   * @dev This function is intended to be called by the original seller.
+   * @param id The unique identifier of the BTC sell order.
+   * @param transaction Information about the Bitcoin transaction.
+   * @param proof Proof associated with the Bitcoin transaction.
+   * @dev Requirements:
+   *   - The specified order must have been previously accepted.
+   *   - The caller must be the original seller of the BTC.
+   *   - The Bitcoin transaction proof must be valid.
+   *   - The BTC transaction output must match the expected amount and recipient.
+   * @dev Effects:
+   *   - Sets the relay difficulty based on the Bitcoin headers in the proof.
+   *   - Transfers the locked USDT amount to the original seller.
+   *   - Removes the order from the mapping after successful processing.
+   * @dev Emits a `btcSuccessfullySendtoDestination` event upon successful completion.
+   */
+  function completeBtcSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
+  public
+  {
+      // Retrieve the accepted order based on the provided ID
+      BtcSellOrder storage acceptedOrder = btcSellOrders[id];
+
+      // Ensure that the order has been accepted and the caller is the original seller
+      require(acceptedOrder.isOrderAccepted == true, "Order must be accepted");
+      require(acceptedOrder.btcSeller == msg.sender, "Only the original seller can provide proof");
+
+      // Set the difficulty of the relay based on the Bitcoin headers in the proof
+      testLightRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
+
+      // Validate the BTC transaction proof using the relay
+      relay.validateProof(transaction, proof);
+
+      // Check if the BTC transaction output matches the expected amount and recipient
+      _checkBitcoinTxOutput(acceptedOrder.sellAmountBtc, acceptedOrder.btcBuyer, transaction);
+
+      // Transfer the locked USDT to the original seller
+      IERC20(usdtContractAddress).safeTransfer(acceptedOrder.btcSeller, acceptedOrder.buyAmount);
+
+      // Remove the order from the mapping since it has been successfully processed
+      delete btcSellOrders[id];
+
+      // Emit an event indicating the successful completion of the BTC to USDT swap
+      emit btcSuccessfullySendtoDestination(id);
+  }
+
+  /**
+   * @notice Places an ordinal sell order in the contract.
+   * @dev Emits an `ordinalSellOrderSuccessfullyPlaced` event upon successful placement.
+   * @param ordinalID The unique identifier for the ordinal.
+   * @param utxo Information about the Bitcoin UTXO associated with the ordinal.
+   * @param buyAmount The amount to be received in exchange for the ordinal.
+   * @dev Requirements:
+   *   - `buyAmount` must be greater than 0.
+   * @dev Effects:
+   *   - Creates a new ordinal sell order with the provided details.
+   */
+  function placeOrdinalSellOrder(OrdinalId calldata ordinalID, BitcoinTx.UTXO calldata utxo, uint256 buyAmount)
+  public
+  {
+      require(buyAmount > 0, "Buying amount should be greater than 0");
+
+      uint256 id = nextOrdinalOrderId++;
+
+      ordinalSellOrders[id] = OrdinalSellOrder({
+          ordinalID: ordinalID,
+          buyAmount: buyAmount,
+          utxo: utxo,
+          ordinalSeller: msg.sender,
+          isOrderAccepted: false,
+          ordinalBuyer: BitcoinAddress({scriptPubKey: new bytes(0)})
+      });
+
+      emit ordinalSellOrderSuccessfullyPlaced(id, ordinalID, buyAmount);
+  }
+
+  /**
+   * @notice Accepts an ordinal sell order, providing the Bitcoin address for the buyer.
+   * @dev Transfers the corresponding currency from the buyer to the contract and updates the order details.
+   * @param id The unique identifier of the ordinal sell order.
+   * @param bitcoinAddress The Bitcoin address of the buyer to receive the ordinal.
+   * @dev Requirements:
+   *   - The specified order must not have been accepted previously.
+   *   - The buyer must transfer the required currency amount to this contract.
+   * @dev Effects:
+   *   - "Locks" the selling token by transferring it to the contract.
+   *   - Updates the ordinal sell order with the buyer's Bitcoin address and marks the order as accepted.
+   * @dev Emits an `ordinalSellOrderBtcSellOrderAccepted` event upon successful acceptance.
+   */
+  function acceptOrdinalSellOrder(uint256 id, BitcoinAddress calldata bitcoinAddress) public {
+      OrdinalSellOrder storage placedOrder = ordinalSellOrders[id];
+      require(placedOrder.isOrderAccepted == false, "Order already accepted");
+
+      // "lock" sell token by transferring to contract
+      IERC20(usdtContractAddress).safeTransferFrom(msg.sender, address(this), placedOrder.buyAmount);
+
+      placedOrder.ordinalBuyer = bitcoinAddress;
+      placedOrder.isOrderAccepted = true;
+
+      emit ordinalSellOrderBtcSellOrderAccepted(id, bitcoinAddress);
+  }
+
+  /**
+   * @notice Completes an ordinal sell order by validating and processing the provided Bitcoin transaction proof.
+   * @dev This function is intended to be called by the original seller.
+   * @param id The unique identifier of the ordinal sell order.
+   * @param transaction Information about the Bitcoin transaction.
+   * @param proof Proof associated with the Bitcoin transaction.
+   * @dev Requirements:
+   *   - The specified order must have been previously accepted.
+   *   - The caller must be the original seller of the ordinal.
+   *   - The Bitcoin transaction proof must be valid.
+   *   - The BTC transaction input must spend the specified UTXO associated with the ordinal sell order.
+   *   - The BTC transaction output must be to the buyer's address.
+   * @dev Effects:
+   *   - Sets the relay difficulty based on the Bitcoin headers in the proof.
+   *   - Validates the BTC transaction proof using the relay.
+   *   - Ensures that the BTC transaction input spends the specified UTXO.
+   *   - Checks the BTC transaction output to the buyer's address.
+   *   - Transfers the locked USDT amount to the original seller.
+   *   - Removes the ordinal sell order from storage after successful processing.
+   * @dev Emits an `ordinalSuccessfullySendtoDestination` event upon successful completion.
+   */
+  function completeOrdinalSellOrder(uint256 id, BitcoinTx.Info calldata transaction, BitcoinTx.Proof calldata proof)
+  public
+  {
+      OrdinalSellOrder storage acceptedOrder = ordinalSellOrders[id];
+
+      // Ensure that the order has been accepted and the caller is the original seller
+      require(acceptedOrder.isOrderAccepted == true, "Order must be accepted");
+      require(acceptedOrder.ordinalSeller == msg.sender, "Only the original seller can provide proof");
+
+      // Set the relay difficulty based on the Bitcoin headers in the proof
+      testLightRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
+
+      // Validate the BTC transaction proof using the relay
+      relay.validateProof(transaction, proof);
+
+      // Ensure that the BTC transaction input spends the specified UTXO associated with the ordinal sell order
+      BitcoinTx.ensureTxInputSpendsUtxo(transaction.inputVector, acceptedOrder.utxo);
+
+      // Check if the BTC transaction output is to the buyer's address
+      _checkBitcoinTxOutput(0, acceptedOrder.ordinalBuyer, transaction);
+
+      // ToDo: Check that the correct satoshis are being spent to the buyer's address if needed
+
+      // Transfer the locked USDT to the original seller
+      IERC20(usdtContractAddress).safeTransfer(acceptedOrder.ordinalSeller, acceptedOrder.buyAmount);
+
+      // Remove the ordinal sell order from storage as it has been successfully processed
+      delete ordinalSellOrders[id];
+
+      // Emit an event to indicate the successful completion of the ordinal sell order
+      emit ordinalSuccessfullySendtoDestination(id);
+  }
+
+  /**
+   * Checks output script pubkey (recipient address) and amount.
+   * Reverts if transaction amount is lower or bitcoin address is not found.
+   *
+   * @param expectedBtcAmount BTC amount requested in order.
+   * @param bitcoinAddress Recipient's bitcoin address.
+   * @param transaction Transaction fulfilling the order.
+   */
+  //ToDo: Should we move this into the library.
+  function _checkBitcoinTxOutput(
+  uint256 expectedBtcAmount,
+  BitcoinAddress storage bitcoinAddress,
+  BitcoinTx.Info calldata transaction
+  ) private {
+  // Prefixes scriptpubkey with its size to match script output data.
+      bytes32 scriptPubKeyHash =
+      keccak256(abi.encodePacked(uint8(bitcoinAddress.scriptPubKey.length), bitcoinAddress.scriptPubKey));
+
+      uint256 txOutputValue = BitcoinTx.getTxOutputValue(scriptPubKeyHash, transaction.outputVector);
+
+      require(txOutputValue >= expectedBtcAmount, "Bitcoin transaction amount is lower than in accepted order.");
+  }
+}
+
+```
+
+Also create a `TestLightRelay.sol` file for deploying your own bitcoin relay.
+```solidity
+pragma solidity 0.8.17;
+
+import {BTCUtils} from "@bob-collective/bitcoin-spv/BTCUtils.sol";
+import "@bob-collective/bob/relay/LightRelay.sol";
+
+/**
+* @title HelloBitcoin
+* @dev contract allows swapping between BTC->USDT and Ordinal->USDT using the BTC relay on testnet.
+* @custom:dev-run-script ./scripts/deploy_relay.ts
+*/
+contract TestLightRelay is LightRelay {
+    using BTCUtils for bytes;
+    using BTCUtils for uint256;
+
+      /// @notice Sets the current and previous difficulty based on the difficulty
+      ///         inferred from the provided Bitcoin headers.
+    function setDifficultyFromHeaders(bytes memory bitcoinHeaders) external {
+        uint256 firstHeaderDiff = bitcoinHeaders.extractTarget().calculateDifficulty();
+
+        currentEpochDifficulty = firstHeaderDiff;
+        prevEpochDifficulty = firstHeaderDiff;
+    }
+}
+
+```
 
   </TabItem>
   <TabItem value="foundry" label="Foundry">
 
-Start a new project with Foundry.
+Clone the starter toolkit provided.
 
 ```shell
-forge init coin
+git clone https://github.com/bob-collective/StarterKit.git
+cd StarterKit
 ```
 
-Create a new `Coin.sol` file in src directory.
-
+The `HelloBitcoin` contract should already be present inside the src directory. To create a new contract:
 ```shell
-cd coin
-touch Coin.sol
+touch src/<Contract_Name>.sol
 ```
 
   </TabItem>
 </Tabs>
 
-Enter the below code in `Coin.sol` file. To learn more about the contract [checkout the Solidity tutorial guide](https://docs.soliditylang.org/en/v0.8.21/introduction-to-smart-contracts.html#subcurrency-example).
 
-```solidity
-
-// SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.4;
-
-contract Coin {
-    // The keyword "public" makes variables
-    // accessible from other contracts
-    address public minter;
-    mapping(address => uint) public balances;
-
-    // Events allow clients to react to specific
-    // contract changes you declare
-    event Sent(address from, address to, uint amount);
-
-    // Constructor code is only run when the contract
-    // is created
-    constructor() {
-        minter = msg.sender;
-    }
-
-    // Sends an amount of newly created coins to an address
-    // Can only be called by the contract creator
-    function mint(address receiver, uint amount) public {
-        require(msg.sender == minter);
-        balances[receiver] += amount;
-    }
-
-    // Errors allow you to provide information about
-    // why an operation failed. They are returned
-    // to the caller of the function.
-    error InsufficientBalance(uint requested, uint available);
-
-    // Sends an amount of existing coins
-    // from any caller to an address
-    function send(address receiver, uint amount) public {
-        if (amount > balances[msg.sender])
-            revert InsufficientBalance({
-                requested: amount,
-                available: balances[msg.sender]
-            });
-
-        balances[msg.sender] -= amount;
-        balances[receiver] += amount;
-        emit Sent(msg.sender, receiver, amount);
-    }
-}
-```
-
-### Compile the Coin Contract
+### Compile the Contract
 
 <Tabs groupId="dev-env">
   <TabItem value="remix" label="Remix">
 
-To compile contract go to `Solidity Compiler` section of the IDE, select and compile the `Coin` smart contract.
+In `Advanced Configurations` section of Solidity Compiler switch from `Compiler configuration` to `Use configuration file`.
 
-You can also directly compile the `Coin` smart contract by right-clicking on the `Coin.sol` file and select compile.
+![Advance remix configuration image](advance_remix_configuration.png)
+
+To compile the contract, go to the `Solidity Compiler` section of the IDE, select and compile the `HelloBitcoin` smart contract.
+You can also directly compile the `HelloBitcoin` smart contract by right-clicking on the `HelloBitcoin.sol` file and select compile.
+In the same way `TestLightRelay.sol` contract should also be compiled.
 
   </TabItem>
   <TabItem value="foundry" label="Foundry">
@@ -142,7 +509,7 @@ forge build
   </TabItem>
 </Tabs>
 
-### Deploy the Coin Contract
+### Deploy the HelloBitcoin Contract
 
 <Tabs groupId="dev-env">
   <TabItem value="remix" label="Remix">
@@ -151,7 +518,24 @@ To deploy the compiled coin smart contract first open the MetaMask extension and
 
 Choose the Remix `ENVIRONMENT` and `Injected Provider - MetaMask`. Remix will deploy contract to connected network, i.e., BOB.
 
-Select contract as `Coin` click `Deploy` and sign the transaction pop up message on .
+Select contract as `TestLightRelay`. Click `Deploy` and sign the transaction pop up message.
+
+![Remix IDE image](test_light_relay.png)
+
+Copy the `TestLightRelay` contract address from the terminal this will be used as a constructor argument for `HelloBitcoin` contract.
+
+Select contract as `HelloBitcoin`.
+
+Add the `_RELAY` ie `TestLightRelay` address copied above. 
+
+Add the `_USDTCONTRACTADDRESS` address as `0xF58de5056b7057D74f957e75bFfe865F571c3fB6`. 
+
+
+:::tip
+If you want, you can also modify the contract at a later stage and use [other ERC20 contracts already deployed on BOB testnet](/docs/build/contracts/).
+:::
+
+Click `Deploy` and sign the transaction pop up message.
 
 ![Remix IDE image](remix_ide.png)
 
@@ -164,34 +548,42 @@ The contract details will be displayed in the Remix terminal.
 
 To deploy the contract via the terminal, you'll need your private key. If you're using MetaMask, be cautious when exporting your private key as it can be risky. Checkout [this article](https://support.metamask.io/hc/en-us/articles/360015289632-How-to-export-an-account-s-private-key) to get your private key from MetaMask.
 
-Deploy the compiled smart contract using the following command:
+To deploy the compiled smart contract on testnet will use the `HelloBitcoin` script present under `scripts/HelloBitcoin.sol`:
 
+Run the following command
 ```shell
-forge create --rpc-url <enter_bob_rpc_url> --private-key <enter_private_key> src/<enter_contract_name>.sol:<enter_contract_name>
-```
+export PRIVATE_KEY=<your-private-key>
+export USDT_ADDRESS=0xF58de5056b7057D74f957e75bFfe865F571c3fB6
+export RPC_URL=https://testnet.rpc.gobob.xyz
+export VERIFIER_URL=https://testnet-explorer.gobob.xyz/api?
 
-For Coin smart contract using the Fluffy BOB testnet:
-
-```shell
-forge create --rpc-url wss://l2-fluffy-bob-7mjgi9pmtg.t.conduit.xyz --private-key <enter_private_key> src/Coin.sol:Coin
+forge script script/HelloBitcoin.sol --rpc-url=$RPC_URL --broadcast --verify --verifier blockscout --verifier-url=$VERIFIER_URL
 ```
 
 The output in the terminal should look similar to this:
 
 ```shell
-Deployer: 0xd8a0bb324b46D89C105BA98C402dF0972b9164Af
-Deployed to: 0xbd56c1FFF2d2073F84825D582808885dbB2085C6
-Transaction hash: 0x263ead5ea07e6122d4d1fe6544158502d278b23e86b2a5b143770b82eead1588
+Script ran successfully.
+...
+✅  [Success]Hash: 0x7a1653e0a0673bd363c28ebd610eb643b29408087f29bf1565df81ded78d2f8b
+Contract Address: 0x14F932d0184d4595A3d152ec13F64A36393701B7
+Block: 4325242
+Paid: 0.00551169309186155 ETH (1837231 gas * 3.00000005 gwei)
+
+✅  [Success]Hash: 0x1d8edfa2be54524804a69507cc967adbdc34716404c43b0d27b9b2375aaf221c
+Contract Address: 0x141eE0F02Df17bE850032D578CC4b3BF7d1c7f4F
+Block: 4325242
+Paid: 0.0082765501379425 ETH (2758850 gas * 3.00000005 gwei)
 ```
 
   </TabItem>
 </Tabs>
 
-### Interact with the Coin Contract
+### Interact with the HelloBitcoin Contract
 
-Checkout the [testnet explorer](https://explorerl2-fluffy-bob-7mjgi9pmtg.t.conduit.xyz) to get contract details using the transaction hash from the previous step.
+Checkout the [testnet explorer](https://testnet-explorer.gobob.xyz/) to get contract details using the transaction hash from the previous step.
 
-![Contract details on Explorer Image](deployed_contract.png)
+![Contract details on Explorer Image](deployed_hello_bitcoin_contract.png)
 
 <Tabs groupId="dev-env">
   <TabItem value="remix" label="Remix">
@@ -201,10 +593,10 @@ Get the [ABI](https://docs.soliditylang.org/en/latest/abi-spec.html) of Coin con
   </TabItem>
   <TabItem value="foundry" label="Foundry">
 
-Get the [ABI](https://docs.soliditylang.org/en/latest/abi-spec.html) of Coin contract:
+Get the [ABI](https://docs.soliditylang.org/en/latest/abi-spec.html) of HelloBitcoin contract:
 
 ```shell
-forge build --silent && jq '.abi' ./out/Coin.sol/Coin.json > coin_contract_abi.json
+forge build --silent && jq '.abi' ./out/HelloBitcoin.sol/HelloBitcoin.json > hello_bitcoin_contract_abi.json
 ```
 
   </TabItem>
@@ -218,7 +610,7 @@ Congratulations! You have successfully deployed your first smart contract on BOB
 
 :::
 
-### Extra: Publish and verify the Coin Contract
+### Extra: Publish and verify the HelloBitcoin Contract
 
 At this point, your smart contract is ready to be used, but we can go a step further to verify and publish the smart contract in the explorer. By doing this you will be able to interact with any existing read or write calls in the contract right on the explorer. To do so follow these steps:
 
@@ -228,9 +620,9 @@ At this point, your smart contract is ready to be used, but we can go a step fur
 
 ![Flatten contract on Remix IDE](remix_ide_flatten.png)
 
-3. Head over to the [testnet explorer](https://explorerl2-fluffy-bob-7mjgi9pmtg.t.conduit.xyz) and search for your published contract page.
+3. Head over to the [testnet explorer](https://testnet-explorer.gobob.xyz/) and search for your published contract page.
 
-4. Click on the "Code" tab and click on "Verify & Publish" button.
+4. Click on the "Contract" tab and click on "Verify & Publish" button.
 
 ![Explore Tab on the chain explorer](explorer_code_tab.png)
 
@@ -276,7 +668,7 @@ Feel free to revisit this guide and check for updates or changes in the links an
 
 ## References
 
-- [Coin contract code](https://github.com/ethereum/solidity/blob/develop/docs/introduction-to-smart-contracts.rst)
+- [HelloBitcoin contract code](https://github.com/bob-collective/StarterKit/blob/main/src/HelloBitcoin.sol)
 - [Remix](https://remix.ethereum.org/)
 - [Foundry](https://book.getfoundry.sh/)
 - [BOB testnet](networks)

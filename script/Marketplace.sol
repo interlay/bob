@@ -17,9 +17,9 @@ contract MarketplaceScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         TestLightRelay relay = new TestLightRelay();
-        BtcMarketPlace btcMarketplace = new BtcMarketPlace(relay, forwarder);
-        OrdMarketplace ordMarketplace = new OrdMarketplace(relay);
-        MarketPlace marketplace = new MarketPlace(forwarder);
+        new BtcMarketPlace(relay, forwarder);
+        new OrdMarketplace(relay);
+        new MarketPlace(forwarder);
 
         vm.stopBroadcast();
     }

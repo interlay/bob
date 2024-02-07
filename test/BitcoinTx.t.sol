@@ -30,7 +30,7 @@ contract BitcoinTxTest is Test {
         assertEq(txId, txHash);
     }
 
-    function test_ProveTx() public {
+    function test_ProveTx() public view {
         bytes32 txId = hex"3557632d64a45dd8ae2abc4e6d5d1a977e98db24c6a0ae186c265ed972011bb6";
 
         bytes32 merkleRoot = hex"01c6691023f17fd78f2dffc85d9db21b84eb6e77352f494f9437168820dbfb90";

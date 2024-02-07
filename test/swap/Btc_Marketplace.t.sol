@@ -44,7 +44,7 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
         super.setRelay(testLightRelay);
     }
 
-    function dummyTransaction() public view returns (BitcoinTx.Info memory) {
+    function dummyTransaction() public pure returns (BitcoinTx.Info memory) {
         return BitcoinTx.Info({
             version: hex"01000000",
             inputVector: hex"01996cf4e2f0016a1f092aaaba653c7eae5dd4b6eef1f9a2a94c64f34b2fecbd85010000006a47304402206f99da49ce586528ed8981842df30b4a5a91195fd2d83e440d4193fc16a944ec022055cfdf63a2c90638821f1b5ff1fdf77526163ae057a0d0de30a6e1d3009e7a29012102811832eef7216470f489991f1d87e36d2890755d2bbf827eb1e71804491506afffffffff",
@@ -53,7 +53,7 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
         });
     }
 
-    function dummyProof() public view returns (BitcoinTx.Proof memory) {
+    function dummyProof() public pure returns (BitcoinTx.Proof memory) {
         return BitcoinTx.Proof({
             merkleProof: hex"0465f99dbe384bbc5d86a5242712e4154958e4b01f595f14b76f873ec349e14a16b17770af2bb48c9b2ce4dddf4631866fe3753e6c54bdcf18dfb2d4fb9983ee58e4f3be92087c843b815bbe1d5d686dc972552f7ffda4342319ceb5bea67ab0f2e463ec8ce8e3f580c5e2470ef20c5b33398ab9fea5ccbd0b3e3f6211305edafa068a28c8ac634df5bbc8064357295373b97db2600745f23ad6ebc87b66b4a8685aa8ff8e69abc5029dbf4b2fa03f05680c7a2c491410b23a5a6b27c5a91b89dac8cdd16a4460ce8ac8d17491025d29336440a133867f938a7f41cc7a64f3f04ac3817c3eb6a6a11dc30850ca4e80f9abbd42268bcc626138bc01639a902713425e7d3aca45647001fb32ff396c07027c5b081325530e74f936e6c4a8078a05f9717efd315534a84d047ee2ff0b2b93159a2b98eabb578af67ef7540a58e488b9c587a994c1a9a86937ad343ea734b7427678e3e6ba0be8f5045ce47e541bbc",
             txIndexInBlock: 1,
@@ -64,7 +64,7 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
         });
     }
 
-    function dummyBitcoinAddress() public returns (BitcoinAddress memory) {
+    function dummyBitcoinAddress() public pure returns (BitcoinAddress memory) {
         return BitcoinAddress({scriptPubKey: hex"76a914fd7e6999cd7e7114383e014b7e612a88ab6be68f88ac"});
     }
 

@@ -58,7 +58,7 @@ Processes the Bitcoin transaction output vector.
 
 
 ```solidity
-function getTxOutputValue(bytes32 scriptPubKeyHash, bytes memory txOutputVector) internal returns (uint64 value);
+function getTxOutputValue(bytes32 scriptPubKeyHash, bytes memory txOutputVector) internal pure returns (uint64 value);
 ```
 **Parameters**
 
@@ -84,7 +84,7 @@ function getTxOutputValue(
     bytes32 scriptPubKeyHash,
     bytes memory txOutputVector,
     TxOutputsProcessingInfo memory processInfo
-) internal returns (uint64 value);
+) internal pure returns (uint64 value);
 ```
 **Parameters**
 

@@ -15,7 +15,7 @@ interface IOracle {
 contract DummyOracle is IOracle {
     int256 public price;
 
-    function decimals() external view returns (uint8) {
+    function decimals() external pure returns (uint8) {
         return 8;
     }
 

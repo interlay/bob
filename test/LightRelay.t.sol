@@ -39,7 +39,7 @@ contract LightRelayTest is Test {
     event Retarget(uint256 oldDifficulty, uint256 newDifficulty);
     event SubmitterAuthorized(address submitter);
 
-    constructor() public {
+    constructor() {
         genesisDifficulty = 5646403851534;
         nextDifficulty = 5106422924659;
 

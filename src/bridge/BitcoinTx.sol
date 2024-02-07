@@ -215,7 +215,11 @@ library BitcoinTx {
     ///        must be validated using e.g. `BTCUtils.validateVout` function
     ///        before it is passed here.
     /// @return value Outcomes of the processing.
-    function getTxOutputValue(bytes32 scriptPubKeyHash, bytes memory txOutputVector) internal returns (uint64 value) {
+    function getTxOutputValue(bytes32 scriptPubKeyHash, bytes memory txOutputVector)
+        internal
+        pure
+        returns (uint64 value)
+    {
         // Determining the total number of transaction outputs in the same way as
         // for number of inputs. See `BitcoinTx.outputVector` docs for more details.
         (uint256 outputsCompactSizeUintLength, uint256 outputsCount) = txOutputVector.parseVarInt();
@@ -253,7 +257,7 @@ library BitcoinTx {
         bytes32 scriptPubKeyHash,
         bytes memory txOutputVector,
         TxOutputsProcessingInfo memory processInfo
-    ) internal returns (uint64 value) {
+    ) internal pure returns (uint64 value) {
         // Outputs processing loop.
         for (uint256 i = 0; i < processInfo.outputsCount; i++) {
             uint256 outputLength = txOutputVector.determineOutputLengthAt(processInfo.outputStartingIndex);

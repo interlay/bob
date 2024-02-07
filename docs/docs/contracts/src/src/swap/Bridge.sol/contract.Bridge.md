@@ -99,7 +99,7 @@ function cancelSwap(uint256 id) public;
 
 
 ```solidity
-function executeSwap(uint256 id, TransactionProof calldata transactionProof) public;
+function executeSwap(uint256 id, TransactionProof calldata) public;
 ```
 
 ### liquidate

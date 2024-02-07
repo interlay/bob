@@ -97,7 +97,7 @@ function getPayer(GsnTypes.RelayRequest calldata relayRequest) public view virtu
 
 
 ```solidity
-function _getPaymasterData(bytes memory paymasterData) private returns (IERC20 token, uint256 maxTokens);
+function _getPaymasterData(bytes memory paymasterData) private pure returns (IERC20 token, uint256 maxTokens);
 ```
 
 ### _calculatePreCharge
@@ -106,6 +106,7 @@ function _getPaymasterData(bytes memory paymasterData) private returns (IERC20 t
 ```solidity
 function _calculatePreCharge(IERC20 token, GsnTypes.RelayRequest calldata relayRequest, uint256 maxPossibleGas)
     internal
+    view
     returns (address payer, uint256 ethPrecharge, uint256 tokenPreCharge);
 ```
 
@@ -125,7 +126,7 @@ function __preRelayedCall(
     bytes calldata signature,
     bytes calldata approvalData,
     uint256 maxPossibleGas
-) public returns (bytes memory context, bool revertOnRecipientRevert);
+) public;
 ```
 
 ### _preRelayedCall
@@ -134,8 +135,8 @@ function __preRelayedCall(
 ```solidity
 function _preRelayedCall(
     GsnTypes.RelayRequest calldata relayRequest,
-    bytes calldata signature,
-    bytes calldata approvalData,
+    bytes calldata,
+    bytes calldata,
     uint256 maxPossibleGas
 ) internal virtual override returns (bytes memory context, bool revertOnRecipientRevert);
 ```

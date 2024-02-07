@@ -27,7 +27,7 @@ contract OnboardingPaymasterTest is OnboardingPaymaster, Test {
         vm.label(bob, "Bob");
     }
 
-    function testDecodeSelector() public {
+    function testDecodeSelector() public view {
         bytes memory rawBytes = hex"1234567890";
         this.getSelector(rawBytes);
     }
