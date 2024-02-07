@@ -200,14 +200,11 @@ contract LightRelayTest is Test {
         relay.genesis(genesisHeader.data, genesisHeader.height, 4);
     }
 
-    //
-    // start genesis
-    //
-    function test_recordRelayReadyForuse() public {
+    function test_RecordRelayReadyForuse() public {
         assertTrue(relay.ready());
     }
 
-    function test_shouldEmitGenesisEvent() public {
+    function test_ShouldEmitGenesisEvent() public {
         relay = new LightRelay();
         vm.expectEmit();
         emit Genesis(genesisHeader.height);
@@ -215,26 +212,26 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_recordGenesisEpochDifficulty() public {
+    function test_RecordGenesisEpochDifficulty() public {
         relay = new LightRelay();
         emit Genesis(genesisHeader.height);
         relay.genesis(genesisHeader.data, genesisHeader.height, 4);
         assertEq(relay.getBlockDifficulty(genesisHeader.height), genesisDifficulty, "assertion failed");
     }
 
-    function test_invalidBlockHeight() public {
+    function test_InvalidBlockHeight() public {
         relay = new LightRelay();
         vm.expectRevert("Invalid height of relay genesis block");
         relay.genesis(genesisHeader.data, genesisHeader.height + 1, 2);
     }
 
-    function test_invalidHeaderData() public {
+    function test_InvalidHeaderData() public {
         relay = new LightRelay();
         vm.expectRevert("Invalid genesis header length");
         relay.genesis("0xdeadbeef", genesisHeader.height, 2);
     }
 
-    function test_excessiveProofLength() public {
+    function test_ExcessiveProofLength() public {
         relay = new LightRelay();
         vm.expectRevert("Invalid genesis header length");
         relay.genesis(
@@ -244,13 +241,13 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_zeroProofLength() public {
+    function test_ZeroProofLength() public {
         relay = new LightRelay();
         vm.expectRevert("Proof length may not be zero");
         relay.genesis(genesisHeader.data, genesisHeader.height, 0);
     }
 
-    function test_callByNonOwner() public {
+    function test_CallByNonOwner() public {
         address nonOwner = address(1234);
         relay = new LightRelay();
         vm.startPrank(nonOwner);
@@ -259,25 +256,18 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_callGenesisTwice() public {
+    function test_CallGenesisTwice() public {
         vm.expectRevert("Genesis already performed");
         relay.genesis(genesisHeader.data, genesisHeader.height, 4);
     }
 
-    //
-    // end genesis
-    //
-
-    //
-    // start setProofLength
-    //
-    function test_proofLengthBeforeGenesis() public {
+    function test_ProofLengthBeforeGenesis() public {
         relay = new LightRelay();
         vm.expectRevert("Relay is not ready for use");
         relay.setProofLength(10);
     }
 
-    function test_proofLengthCalledCorrectly() public {
+    function test_ProofLengthCalledCorrectly() public {
         vm.expectEmit();
         emit ProofLengthChanged(5);
         relay.setProofLength(5);
@@ -285,22 +275,22 @@ contract LightRelayTest is Test {
         assertEq(relay.proofLength(), 5);
     }
 
-    function test_excessiveSetProofLength() public {
+    function test_ExcessiveSetProofLength() public {
         vm.expectRevert("Proof length excessive");
         relay.setProofLength(2016);
     }
 
-    function test_zeroSetProofLength() public {
+    function test_ZeroSetProofLength() public {
         vm.expectRevert("Proof length may not be zero");
         relay.setProofLength(0);
     }
 
-    function test_unchangedSetProofLength() public {
+    function test_UnchangedSetProofLength() public {
         vm.expectRevert("Proof length unchanged");
         relay.setProofLength(4);
     }
 
-    function test_setProofLengthCallByNonOwner() public {
+    function test_SetProofLengthCallByNonOwner() public {
         address nonOwner = address(1234);
         vm.startPrank(nonOwner);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -308,14 +298,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    //
-    // end setProofLength
-    //
-
-    //
-    // start authorization
-    //
-    function test_authorizationRequired() public {
+    function test_AuthorizationRequired() public {
         vm.expectEmit();
         emit AuthorizationRequirementChanged(true);
         relay.setAuthorizationStatus(true);
@@ -323,7 +306,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_authorizationRequiredCallByNonOwner() public {
+    function test_AuthorizationRequiredCallByNonOwner() public {
         address nonOwner = address(1234);
         vm.startPrank(nonOwner);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -331,7 +314,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_submitterAuthorization() public {
+    function test_SubmitterAuthorization() public {
         address newAuthorizer = address(1234);
 
         // should start at false
@@ -345,7 +328,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_submitterDeAuthorization() public {
+    function test_SubmitterDeAuthorization() public {
         address author = address(1234);
         relay.authorize(author);
 
@@ -360,14 +343,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    //
-    // end authorization
-    //
-
-    //
-    // retarget
-    //
-    function test_retargetBeforeGenesis() public {
+    function test_RetargetBeforeGenesis() public {
         relay = new LightRelay();
         vm.expectRevert("Relay is not ready for use");
         relay.retarget(
@@ -377,7 +353,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_retarget() public {
+    function test_Retarget() public {
         setUpGenesis();
 
         // we need at least one retarget
@@ -402,7 +378,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_retargetWithIncorrectNumberOfHeader() public {
+    function test_RetargetWithIncorrectNumberOfHeader() public {
         setUpGenesis();
 
         // we need at least one retarget
@@ -413,7 +389,7 @@ contract LightRelayTest is Test {
         relay.retarget(abi.encodePacked(retargetHeaders[0].data));
     }
 
-    function test_retargetWithFewHeadersBefore() public {
+    function test_RetargetWithFewHeadersBefore() public {
         setUpGenesis();
 
         // we need at least one retarget
@@ -435,7 +411,7 @@ contract LightRelayTest is Test {
         vm.stopPrank();
     }
 
-    function test_retargetWithFewHeadersAfter() public {
+    function test_RetargetWithFewHeadersAfter() public {
         setUpGenesis();
 
         // we need at least one retarget
@@ -456,14 +432,8 @@ contract LightRelayTest is Test {
         );
         vm.stopPrank();
     }
-    //
-    // end retarget
-    //
 
-    //
-    // start validateChain
-    //
-    function test_validateChainBeforeGenesis() public {
+    function test_ValidateChainBeforeGenesis() public {
         relay = new LightRelay();
         vm.expectRevert("Cannot validate chains before relay genesis");
         relay.validateChain(
@@ -473,7 +443,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_validateHeaderChainsEpoch274() public {
+    function test_ValidateHeaderChainsEpoch274() public {
         (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[1].data, retargetHeaders[2].data, retargetHeaders[3].data, retargetHeaders[4].data
@@ -482,14 +452,14 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateShortHeaderChainsEpoch274() public {
+    function test_ValidateShortHeaderChainsEpoch274() public {
         (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(retargetHeaders[1].data, retargetHeaders[2].data, retargetHeaders[3].data)
         );
         assertEq(headerCount, 3);
     }
 
-    function test_validateLongHeaderChainsEpoch274() public {
+    function test_ValidateLongHeaderChainsEpoch274() public {
         (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[1].data,
@@ -506,19 +476,19 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 9);
     }
 
-    function test_validateChainShouldRejectSingleHeaderAfterEpoch274() public {
+    function test_ValidateChainShouldRejectSingleHeaderAfterEpoch274() public {
         vm.expectRevert("Invalid number of headers");
         (uint256 startingHeaderTimestamp, uint256 headerCount) =
             relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
     }
 
-    function test_validateChainShouldRejectUnknownRetargetAfterEpoch274() public {
+    function test_ValidateChainShouldRejectUnknownRetargetAfterEpoch274() public {
         vm.expectRevert("Invalid number of headers");
         (uint256 startingHeaderTimestamp, uint256 headerCount) =
             relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
     }
 
-    function test_validateChainShouldRejectChainInFutureEpochAfterEpoch274() public {
+    function test_ValidateChainShouldRejectChainInFutureEpochAfterEpoch274() public {
         setUpGenesis();
         vm.expectRevert("Invalid target in header chain");
 
@@ -529,7 +499,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_validateHeaderChainsAfterEpoch275() public {
+    function test_ValidateHeaderChainsAfterEpoch275() public {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
         (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
@@ -540,7 +510,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateHeaderChainsRejectInPartiallyPastEpochAfterEpoch275() public {
+    function test_ValidateHeaderChainsRejectInPartiallyPastEpochAfterEpoch275() public {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
         vm.expectRevert("Cannot validate chains before relay genesis");
@@ -552,7 +522,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_validateHeaderChainsRejectInFullyPastEpochAfterEpoch275() public {
+    function test_ValidateHeaderChainsRejectInFullyPastEpochAfterEpoch275() public {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
         vm.expectRevert("Cannot validate chains before relay genesis");
@@ -564,7 +534,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_validateHeaderChainsAfterGenesisEpoch() public {
+    function test_ValidateHeaderChainsAfterGenesisEpoch() public {
         setUpGenesis();
         (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
@@ -574,7 +544,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateHeaderChains3Before1AfterOverRetarget() public {
+    function test_ValidateHeaderChains3Before1AfterOverRetarget() public {
         setUpGenesis();
         vm.warp(14594924750);
         relay.retarget(
@@ -598,7 +568,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateHeaderChains2Before2AfterOverRetarget() public {
+    function test_ValidateHeaderChains2Before2AfterOverRetarget() public {
         setUpGenesis();
         vm.warp(14594924750);
         relay.retarget(
@@ -622,7 +592,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateHeaderChains1Before3AfterOverRetarget() public {
+    function test_ValidateHeaderChains1Before3AfterOverRetarget() public {
         setUpGenesis();
         vm.warp(14594924750);
         relay.retarget(
@@ -646,7 +616,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 4);
     }
 
-    function test_validateChainWithChainReorg() public {
+    function test_ValidateChainWithChainReorg() public {
         relay = new LightRelay();
         relay.genesis(postRetargetChain[0].data, postRetargetChain[0].height, 8);
 
@@ -665,7 +635,7 @@ contract LightRelayTest is Test {
         assertEq(headerCount, 8);
     }
 
-    function test_validateChainRejectWithChainReorg() public {
+    function test_ValidateChainRejectWithChainReorg() public {
         relay = new LightRelay();
         relay.genesis(postRetargetChain[0].data, postRetargetChain[0].height, 8);
         vm.expectRevert("Invalid chain");
@@ -684,20 +654,13 @@ contract LightRelayTest is Test {
         );
     }
 
-    //
-    // end validateChain
-    //
-
-    //
-    // start getBlockDifficulty
-    //
-    function test_getBlockDifficultyBeforeGenesis() public {
+    function test_GetBlockDifficultyBeforeGenesis() public {
         relay = new LightRelay();
         vm.expectRevert("Epoch is not proven to the relay yet");
         relay.getBlockDifficulty(genesisHeader.height);
     }
 
-    function test_getBlockDifficultyAfterGenesis() public {
+    function test_GetBlockDifficultyAfterGenesis() public {
         setUpGenesis();
         // should return the difficulty for the first block of the epoch
         assertEq(relay.getBlockDifficulty(genesisHeader.height), genesisDifficulty);
@@ -714,7 +677,7 @@ contract LightRelayTest is Test {
         relay.getBlockDifficulty(554400);
     }
 
-    function test_getBlockDifficultyAfterRetarget() public {
+    function test_GetBlockDifficultyAfterRetarget() public {
         setUpGenesis();
 
         vm.warp(14594924750);
@@ -751,21 +714,15 @@ contract LightRelayTest is Test {
         vm.expectRevert("Epoch is not proven to the relay yet");
         relay.getBlockDifficulty(556416);
     }
-    //
-    // end getBlockDifficulty
-    //
 
-    //
-    // start getEpochDifficulty
-    //
-    function test_getEpochDifficultyBeforeGenesis() public {
+    function test_GetEpochDifficultyBeforeGenesis() public {
         relay = new LightRelay();
 
         vm.expectRevert("Epoch is not proven to the relay yet");
         relay.getEpochDifficulty(genesisHeader.height / 2016);
     }
 
-    function test_getEpochDifficultyAfterGenesis() public {
+    function test_GetEpochDifficultyAfterGenesis() public {
         setUpGenesis();
 
         // should return the difficulty for the genesis epoch
@@ -780,7 +737,7 @@ contract LightRelayTest is Test {
         relay.getEpochDifficulty((genesisHeader.height / 2016) + 1);
     }
 
-    function test_getEpochDifficultyAfterRetarget() public {
+    function test_GetEpochDifficultyAfterRetarget() public {
         // should return the difficulty for the genesis epoch
         assertEq(relay.getEpochDifficulty(274), genesisDifficulty);
 
@@ -796,21 +753,14 @@ contract LightRelayTest is Test {
         relay.getEpochDifficulty(276);
     }
 
-    //
-    // end getEpochDifficulty
-    //
-
-    //
-    // start getRelayRange
-    //
-    function test_getRelayRangeBeforeGenesis() public {
+    function test_GetRelayRangeBeforeGenesis() public {
         relay = new LightRelay();
         (uint256 relayGenesis, uint256 currentEpochEnd) = relay.getRelayRange();
         assertEq(relayGenesis, 0);
         assertEq(currentEpochEnd, 2015);
     }
 
-    function test_getRelayRangeAfterGenesis() public {
+    function test_GetRelayRangeAfterGenesis() public {
         setUpGenesis();
         (uint256 relayGenesis, uint256 currentEpochEnd) = relay.getRelayRange();
         // should return two epochs
@@ -818,84 +768,62 @@ contract LightRelayTest is Test {
         assertEq(currentEpochEnd, 554399);
     }
 
-    function test_getRelayRangeAfterRetarget() public {
+    function test_GetRelayRangeAfterRetarget() public {
         (uint256 relayGenesis, uint256 currentEpochEnd) = relay.getRelayRange();
         // should return two epochs
         assertEq(relayGenesis, genesisHeader.height);
         assertEq(currentEpochEnd, 556415);
     }
-    //
-    // end getRelayRange
-    //
 
-    //
-    // start getCurrentEpochDifficulty
-    //
-    function test_getCurrentEpochDifficultyBeforeGenesis() public {
+    function test_GetCurrentEpochDifficultyBeforeGenesis() public {
         relay = new LightRelay();
         assertEq(relay.getCurrentEpochDifficulty(), 0);
     }
 
-    function test_getCurrentEpochDifficultyAfterGenesis() public {
+    function test_GetCurrentEpochDifficultyAfterGenesis() public {
         setUpGenesis();
         assertEq(relay.getCurrentEpochDifficulty(), genesisDifficulty);
     }
 
-    function test_getCurrentEpochDifficultyAfterRetarget() public {
+    function test_GetCurrentEpochDifficultyAfterRetarget() public {
         assertEq(relay.getCurrentEpochDifficulty(), nextDifficulty);
     }
-    //
-    // end getCurrentEpochDifficulty
-    //
 
-    //
-    // start getPrevEpochDifficulty
-    //
-    function test_getPrevEpochDifficultyBeforeGenesis() public {
+    function test_GetPrevEpochDifficultyBeforeGenesis() public {
         relay = new LightRelay();
         assertEq(relay.getPrevEpochDifficulty(), 0);
     }
 
-    function test_getPrevEpochDifficultyAfterGenesis() public {
+    function test_GetPrevEpochDifficultyAfterGenesis() public {
         setUpGenesis();
         assertEq(relay.getPrevEpochDifficulty(), 0);
     }
 
-    function test_getPrevEpochDifficultyAfterRetarget() public {
+    function test_GetPrevEpochDifficultyAfterRetarget() public {
         assertEq(relay.getPrevEpochDifficulty(), genesisDifficulty);
     }
 
-    //
-    // end getPrevEpochDifficulty
-    //
-
-    //
-    // start getCurrentAndPrevEpochDifficulty
-    //
-    function test_getCurrentAndPrevEpochDifficultyBeforeGenesis() public {
+    function test_GetCurrentAndPrevEpochDifficultyBeforeGenesis() public {
         relay = new LightRelay();
         (uint256 current, uint256 previous) = relay.getCurrentAndPrevEpochDifficulty();
         assertEq(current, 0);
         assertEq(previous, 0);
     }
 
-    function test_getCurrentAndPrevEpochDifficultyAfterGenesis() public {
+    function test_GetCurrentAndPrevEpochDifficultyAfterGenesis() public {
         setUpGenesis();
         (uint256 current, uint256 previous) = relay.getCurrentAndPrevEpochDifficulty();
         assertEq(current, genesisDifficulty);
         assertEq(previous, 0);
     }
 
-    function test_getCurrentAndPrevEpochDifficultyAfterRetarget() public {
+    function test_GetCurrentAndPrevEpochDifficultyAfterRetarget() public {
         (uint256 current, uint256 previous) = relay.getCurrentAndPrevEpochDifficulty();
         assertEq(current, nextDifficulty);
         assertEq(previous, genesisDifficulty);
     }
 
-    //
-    // start validateProof
-    //
-    function test_validateProof() public {
+    function test_ValidateProof() public {
         state.relay = relay;
         state.txProofDifficultyFactor = 1;
 
@@ -915,7 +843,7 @@ contract LightRelayTest is Test {
         );
     }
 
-    function test_validateProofWithInvalidData() public {
+    function test_ValidateProofWithInvalidData() public {
         state.relay = relay;
         state.txProofDifficultyFactor = 1;
         // txId = 15afe550f468cf0134557533e7f0bd6f210c1a2791d75a8ea57f17c4209448f9
@@ -959,21 +887,10 @@ contract LightRelayTest is Test {
         );
     }
 
-    //
-    // end validateProof
-    //
-
-    //
-    // start evaluateProofDifficulty
-    //
-    function test_evaluateProofDifficulty() public {
+    function test_EvaluateProofDifficulty() public {
         state.relay = relay;
         state.txProofDifficultyFactor = 1;
 
         state.evaluateProofDifficulty(abi.encodePacked(proofHeaders[0].data));
     }
-
-    //
-    // end evaluateProofDifficulty
-    //
 }
