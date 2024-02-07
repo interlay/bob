@@ -444,7 +444,7 @@ contract LightRelayTest is Test {
     }
 
     function test_ValidateHeaderChainsEpoch274() public {
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[1].data, retargetHeaders[2].data, retargetHeaders[3].data, retargetHeaders[4].data
             )
@@ -453,14 +453,14 @@ contract LightRelayTest is Test {
     }
 
     function test_ValidateShortHeaderChainsEpoch274() public {
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(retargetHeaders[1].data, retargetHeaders[2].data, retargetHeaders[3].data)
         );
         assertEq(headerCount, 3);
     }
 
     function test_ValidateLongHeaderChainsEpoch274() public {
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[1].data,
                 retargetHeaders[2].data,
@@ -478,21 +478,18 @@ contract LightRelayTest is Test {
 
     function test_ValidateChainShouldRejectSingleHeaderAfterEpoch274() public {
         vm.expectRevert("Invalid number of headers");
-        (uint256 startingHeaderTimestamp, uint256 headerCount) =
-            relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
+        relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
     }
 
     function test_ValidateChainShouldRejectUnknownRetargetAfterEpoch274() public {
         vm.expectRevert("Invalid number of headers");
-        (uint256 startingHeaderTimestamp, uint256 headerCount) =
-            relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
+        relay.validateChain(abi.encodePacked(retargetHeaders[0].data));
     }
 
     function test_ValidateChainShouldRejectChainInFutureEpochAfterEpoch274() public {
         setUpGenesis();
         vm.expectRevert("Invalid target in header chain");
-
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[10].data, retargetHeaders[11].data, retargetHeaders[12].data, retargetHeaders[13].data
             )
@@ -502,7 +499,7 @@ contract LightRelayTest is Test {
     function test_ValidateHeaderChainsAfterEpoch275() public {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[10].data, retargetHeaders[11].data, retargetHeaders[12].data, retargetHeaders[13].data
             )
@@ -514,8 +511,7 @@ contract LightRelayTest is Test {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
         vm.expectRevert("Cannot validate chains before relay genesis");
-
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[9].data, retargetHeaders[10].data, retargetHeaders[11].data, retargetHeaders[12].data
             )
@@ -526,8 +522,7 @@ contract LightRelayTest is Test {
         relay = new LightRelay();
         relay.genesis(nextStartHeader.data, nextStartHeader.height, 4);
         vm.expectRevert("Cannot validate chains before relay genesis");
-
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[6].data, retargetHeaders[7].data, retargetHeaders[8].data, retargetHeaders[9].data
             )
@@ -536,7 +531,7 @@ contract LightRelayTest is Test {
 
     function test_ValidateHeaderChainsAfterGenesisEpoch() public {
         setUpGenesis();
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[1].data, retargetHeaders[2].data, retargetHeaders[3].data, retargetHeaders[4].data
             )
@@ -560,7 +555,7 @@ contract LightRelayTest is Test {
             )
         );
 
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[7].data, retargetHeaders[8].data, retargetHeaders[9].data, retargetHeaders[10].data
             )
@@ -584,7 +579,7 @@ contract LightRelayTest is Test {
             )
         );
 
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[8].data, retargetHeaders[9].data, retargetHeaders[10].data, retargetHeaders[11].data
             )
@@ -608,7 +603,7 @@ contract LightRelayTest is Test {
             )
         );
 
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 retargetHeaders[9].data, retargetHeaders[10].data, retargetHeaders[11].data, retargetHeaders[12].data
             )
@@ -620,7 +615,7 @@ contract LightRelayTest is Test {
         relay = new LightRelay();
         relay.genesis(postRetargetChain[0].data, postRetargetChain[0].height, 8);
 
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        (, uint256 headerCount) = relay.validateChain(
             abi.encodePacked(
                 postRetargetChain[0].data,
                 postRetargetChain[1].data,
@@ -640,7 +635,7 @@ contract LightRelayTest is Test {
         relay.genesis(postRetargetChain[0].data, postRetargetChain[0].height, 8);
         vm.expectRevert("Invalid chain");
 
-        (uint256 startingHeaderTimestamp, uint256 headerCount) = relay.validateChain(
+        relay.validateChain(
             abi.encodePacked(
                 postRetargetChain[1].data,
                 postRetargetChain[2].data,
@@ -828,7 +823,7 @@ contract LightRelayTest is Test {
         state.txProofDifficultyFactor = 1;
 
         // txId = 15afe550f468cf0134557533e7f0bd6f210c1a2791d75a8ea57f17c4209448f9
-        (bytes32 txHash) = state.validateProof(
+        state.validateProof(
             BitcoinTx.Info({
                 version: hex"02000000",
                 inputVector: hex"01123c43f161517343e93191e838b2f04356665ff526bf95cfe6c9986de7a10a3e010000001716001402c8f68bb02b257de42f5ca11b525bd3b47a0369feffffff",
