@@ -36,7 +36,7 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv --via-ir --deny-warnings
+          forge test -vvv --deny-warnings
         id: test
 
       - name: Run Forge docs
