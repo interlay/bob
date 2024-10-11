@@ -99,6 +99,20 @@ Returns a `uuid` for the order and `psbtBase64`, a partially-signed Bitcoin tran
 const { uuid, psbtBase64 } = await gatewaySDK.startOrder(quote, quoteParams);
 ```
 
+#### Fees
+
+It is possible to collect BTC fees if the `feeRecipient` and `fee` (BPS) params are set:
+
+```ts
+const { uuid, psbtBase64 } = await gatewaySDK.startOrder(quote, {
+  ...quoteParams,
+  feeRecipient: '1K69EVCKwd8vm8GFbCzyWz7CBVrnjkis5G',
+  fee: 100, // 1%
+});
+```
+
+This will add a new output to the PSBT which collects fees based on the amount of BTC requested (up to 10%), note that any output below the dust limit will be dropped.
+
 ### Sign the Bitcoin Transaction
 
 Create a Bitcoin transaction that sends the quoted `amount` of BTC to the LP's `bitcoinAddress`. This also publishes a hash of the order's parameters in the `OP_RETURN` of the transaction so the Gateway can trustlessly verify the order on BOB.

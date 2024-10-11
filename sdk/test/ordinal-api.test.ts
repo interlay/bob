@@ -71,8 +71,7 @@ describe('Ordinal API Tests', () => {
         });
         const expectedOutputJson: OutputJson = {
             value: 10737,
-            script_pubkey:
-                'OP_PUSHNUM_1 OP_PUSHBYTES_32 e18a5367c5d11ee31d10bf4c53e743a7479c70e3336e70dbdea1fd927305c022',
+            script_pubkey: '5120e18a5367c5d11ee31d10bf4c53e743a7479c70e3336e70dbdea1fd927305c022',
             address: 'bc1pux99xe796y0wx8gshax98e6r5arecu8rxdh8pk77587eyuc9cq3q2e3nng',
             transaction: 'dfe942a58b7e29a3952d8d1ed6608086c66475d20bc7bdbc3d784d616f9a6a7a',
             sat_ranges: null,

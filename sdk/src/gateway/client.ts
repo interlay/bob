@@ -20,6 +20,7 @@ import { SYMBOL_LOOKUP, ADDRESS_LOOKUP } from './tokens';
 import { createBitcoinPsbt } from '../wallet';
 import { Network } from 'bitcoin-address-validation';
 import { EsploraClient } from '../esplora';
+import { stripHexPrefix } from '../utils';
 
 type Optional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 
@@ -197,14 +198,16 @@ export class GatewayApiClient {
             typeof params.fromChain === 'string' &&
             params.fromChain.toLowerCase() === Chain.BITCOIN
         ) {
-            psbtBase64 = await createBitcoinPsbt(
-                params.fromUserAddress,
-                gatewayQuote.bitcoinAddress,
-                gatewayQuote.satoshis,
-                params.fromUserPublicKey,
-                data.opReturnHash,
-                gatewayQuote.txProofDifficultyFactor
-            );
+            psbtBase64 = await createBitcoinPsbt({
+                fromAddress: params.fromUserAddress,
+                toAddress: gatewayQuote.bitcoinAddress,
+                amount: gatewayQuote.satoshis,
+                publicKey: params.fromUserPublicKey,
+                opReturnData: data.opReturnHash,
+                confirmationTarget: gatewayQuote.txProofDifficultyFactor,
+                feeRecipient: params.feeRecipient,
+                feeAmount: calculateFeeAmount(gatewayQuote.satoshis, params.fee),
+            });
         }
 
         return {
@@ -436,17 +439,19 @@ function calculateOpReturnHash(req: GatewayCreateOrderRequest) {
     );
 }
 
-function isHexPrefixed(str: string): boolean {
-    return str.slice(0, 2) === '0x';
-}
-
-function stripHexPrefix(str: string): string {
-    return isHexPrefixed(str) ? str.slice(2) : str;
-}
-
 function slugify(str: string): string {
     return str
         .toLowerCase()
         .replace(/ /g, '-')
         .replace(/[^\w-]+/g, '');
+}
+
+function calculateFeeAmount(amount: number, fee?: number) {
+    if (typeof fee === 'undefined' || fee < 1 || fee > 1000) {
+        fee = 0;
+    }
+
+    const feeDecimal = fee / 10000;
+    const feeAmount = amount * feeDecimal;
+    return feeAmount;
 }

@@ -49,7 +49,13 @@ describe('UTXO Tests', () => {
                             // Use a random public key for P2SH-P2WPKH
                             pubkey = '03b366c69e8237d9be7c4f1ac2a7abc6a79932fbf3de4e2f6c04797d7ef27abfe1';
                         }
-                        const psbtBase64 = await createBitcoinPsbt(paymentAddress, toAddress, amount, pubkey, opReturn);
+                        const psbtBase64 = await createBitcoinPsbt({
+                            fromAddress: paymentAddress,
+                            toAddress,
+                            amount,
+                            publicKey: pubkey,
+                            opReturnData: opReturn,
+                        });
                         const transaction = Transaction.fromPSBT(base64.decode(psbtBase64));
 
                         assert(transaction);

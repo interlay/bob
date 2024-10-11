@@ -141,7 +141,7 @@ describe('Gateway Tests', () => {
             gatewayAddress: ZeroAddress,
             baseTokenAddress: TBTC_ADDRESS,
             dustThreshold: 1000,
-            satoshis: 1000,
+            satoshis: 10000,
             fee: 10,
             bitcoinAddress: 'bc1qafk4yhqvj4wep57m62dgrmutldusqde8adh20d',
             txProofDifficultyFactor: 3,
@@ -158,7 +158,7 @@ describe('Gateway Tests', () => {
                 toChain: 'BOB',
                 toToken: 'tBTC',
                 toUserAddress: '2N8DbeaBdjkktkRzaKL1tHj9FQELV7jA8Re',
-                amount: 1000,
+                amount: 10000,
                 fromChain: 'Bitcoin',
                 fromToken: 'BTC',
                 fromUserAddress: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
@@ -169,10 +169,12 @@ describe('Gateway Tests', () => {
             toChain: 'BOB',
             toToken: 'tBTC',
             toUserAddress: ZeroAddress,
-            amount: 1000,
+            amount: 10000,
             fromChain: 'Bitcoin',
             fromToken: 'BTC',
             fromUserAddress: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+            feeRecipient: '3DFVKuT9Ft4rWpysAZ1bHpg55EBy1HVPcr',
+            fee: 600,
         });
 
         assert.isDefined(result.psbtBase64);
@@ -181,6 +183,8 @@ describe('Gateway Tests', () => {
             psbt.txOutputs[0].script,
             bitcoin.script.compile([bitcoin.opcodes.OP_RETURN, Buffer.from(result.opReturnHash.slice(2), 'hex')])
         );
+        assert.deepEqual(psbt.txOutputs[1].address, '3DFVKuT9Ft4rWpysAZ1bHpg55EBy1HVPcr');
+        assert.deepEqual(psbt.txOutputs[1].value, 600);
     });
 
     it('should get strategies', async () => {

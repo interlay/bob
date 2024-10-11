@@ -209,3 +209,11 @@ export function estimateTxFee(feeRate: number, numInputs: number = 1) {
     const satoshis = feeRate * vsize;
     return satoshis;
 }
+
+export function isHexPrefixed(str: string): boolean {
+    return str.slice(0, 2) === '0x';
+}
+
+export function stripHexPrefix(str: string): string {
+    return isHexPrefixed(str) ? str.slice(2) : str;
+}

@@ -2,6 +2,9 @@ import { Transaction, Script, selectUTXO, TEST_NETWORK, NETWORK, p2wpkh, p2sh } 
 import { hex, base64 } from '@scure/base';
 import { AddressType, getAddressInfo, Network } from 'bitcoin-address-validation';
 import { EsploraClient, UTXO } from '../esplora';
+import { stripHexPrefix } from '../utils';
+
+const DUST_LIMIT = 546;
 
 export type BitcoinNetworkName = Exclude<Network, 'regtest'>;
 
@@ -33,22 +36,37 @@ export interface Input {
  * May add an additional change output. This returns an **unsigned** PSBT encoded
  * as a Base64 string.
  *
- * @param fromAddress The Bitcoin address which is sending to the `toAddress`.
- * @param toAddress The Bitcoin address which is receiving the BTC.
- * @param amount The amount of BTC (as satoshis) to send.
- * @param publicKey Optional public key needed if using P2SH-P2WPKH.
- * @param opReturnData Optional OP_RETURN data to include in an output.
- * @param confirmationTarget The number of blocks to include this tx (for fee estimation).
+ * @param params An object containing the following properties:
+ * - `fromAddress`: The Bitcoin address which is sending to the `toAddress`.
+ * - `toAddress`: The Bitcoin address which is receiving the BTC.
+ * - `amount`: The amount of BTC (as satoshis) to send.
+ * - `publicKey` (optional): Public key needed if using P2SH-P2WPKH.
+ * - `opReturnData` (optional): OP_RETURN data to include in an output.
+ * - `confirmationTarget` (optional): The number of blocks to include this tx (for fee estimation). Defaults to 3.
+ *
  * @returns {Promise<string>} The Base64 encoded PSBT.
  */
-export async function createBitcoinPsbt(
-    fromAddress: string,
-    toAddress: string,
-    amount: number,
-    publicKey?: string,
-    opReturnData?: string,
-    confirmationTarget: number = 3
-): Promise<string> {
+export async function createBitcoinPsbt(params: {
+    fromAddress: string;
+    toAddress: string;
+    amount: number;
+    publicKey?: string;
+    opReturnData?: string;
+    confirmationTarget?: number;
+    feeRecipient?: string;
+    feeAmount?: number;
+}): Promise<string> {
+    const {
+        fromAddress,
+        toAddress,
+        amount,
+        publicKey,
+        opReturnData,
+        confirmationTarget = 3,
+        feeRecipient,
+        feeAmount,
+    } = params;
+
     const addressInfo = getAddressInfo(fromAddress);
     const network = addressInfo.network;
     if (network === 'regtest') {
@@ -92,14 +110,17 @@ export async function createBitcoinPsbt(
         },
     ];
 
+    if (feeRecipient && feeAmount && feeAmount > DUST_LIMIT) {
+        outputs.push({
+            address: feeRecipient,
+            amount: BigInt(feeAmount),
+        });
+    }
+
     if (opReturnData) {
-        // Strip 0x prefix from opReturn
-        if (opReturnData.startsWith('0x')) {
-            opReturnData = opReturnData.slice(2);
-        }
         outputs.push({
             // OP_RETURN https://github.com/paulmillr/scure-btc-signer/issues/26
-            script: Script.encode(['RETURN', hex.decode(opReturnData)]),
+            script: Script.encode(['RETURN', hex.decode(stripHexPrefix(opReturnData))]),
             amount: BigInt(0),
         });
     }
@@ -117,7 +138,7 @@ export async function createBitcoinPsbt(
         allowUnknownOutputs: true, // Required for OP_RETURN
         allowLegacyWitnessUtxo: true, // Required for P2SH-P2WPKH
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dust: BigInt(546) as any, // TODO: update scure-btc-signer
+        dust: BigInt(DUST_LIMIT) as any, // TODO: update scure-btc-signer
     });
 
     if (!transaction || !transaction.tx) {

@@ -67,6 +67,8 @@ export interface GatewayQuoteParams {
     fromUserPublicKey?: string;
     /** @description Strategy address */
     strategyAddress?: string;
+    /** @description Partner address */
+    feeRecipient?: string;
 }
 
 /**
