@@ -9,6 +9,7 @@ import {BytesLib} from "@bob-collective/bitcoin-spv/BytesLib.sol";
 import {ValidateSPV} from "@bob-collective/bitcoin-spv/ValidateSPV.sol";
 
 import {IRelay} from "../relay/IRelay.sol";
+import {IFullRelay} from "../relay/FullRelayInterfaces.sol";
 
 /// @title Bitcoin transaction
 /// @notice Allows to reference Bitcoin raw transaction in Solidity.
@@ -144,7 +145,7 @@ library BitcoinTx {
     /// @param txInfo Bitcoin transaction data.
     /// @param proof Bitcoin proof data.
     /// @return txHash Proven 32-byte transaction hash.
-    function validateProof(IRelay relay, uint256 txProofDifficultyFactor, Info memory txInfo, Proof memory proof)
+    function validateProof(IFullRelay relay, uint256 txProofDifficultyFactor, Info memory txInfo, Proof memory proof)
         internal
         view
         returns (bytes32 txHash)
@@ -172,7 +173,7 @@ library BitcoinTx {
     /// @param txProofDifficultyFactor The number of confirmations required on the Bitcoin chain.
     /// @param bitcoinHeaders Bitcoin headers chain being part of the SPV
     ///        proof. Used to extract the observed proof difficulty.
-    function evaluateProofDifficulty(IRelay relay, uint256 txProofDifficultyFactor, bytes memory bitcoinHeaders)
+    function evaluateProofDifficulty(IFullRelay relay, uint256 txProofDifficultyFactor, bytes memory bitcoinHeaders)
         internal
         view
     {

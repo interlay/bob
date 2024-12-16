@@ -5,11 +5,12 @@ using stdStorage for StdStorage;
 
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {stdStorage, StdStorage, Test, console} from "forge-std/Test.sol";
+import {stdStorage, StdStorage, Test, console2, console} from "forge-std/Test.sol";
 import {BtcMarketPlace} from "../../src/swap/Btc_Marketplace.sol";
 import {Utilities} from "./Utilities.sol";
 import {BitcoinTx} from "../../src/utils/BitcoinTx.sol";
-import {TestLightRelay} from "../../src/relay/TestLightRelay.sol";
+import {TestFullRelay} from "../../src/relay/TestFullRelay.sol";
+import {FullRelayTestUtils} from "../fullRelay/FullRelayTestUtils.sol";
 
 contract ArbitaryErc20 is ERC20, Ownable {
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
@@ -27,7 +28,7 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
 
     ArbitaryErc20 token1;
 
-    constructor() BtcMarketPlace(testLightRelay, address(0x00)) {}
+    constructor() BtcMarketPlace(testFullRelay, address(0x00)) {}
 
     function setUp() public {
         utils = new Utilities();
@@ -40,8 +41,12 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
 
         token1 = new ArbitaryErc20("Some token", "TKN");
 
-        testLightRelay = new TestLightRelay();
-        super.setRelay(testLightRelay);
+        testFullRelay = new TestFullRelay(
+            hex"00000020db62962b5989325f30f357762ae456b2ec340432278e14000000000000000000d1dd4e30908c361dfeabfb1e560281c1a270bde3c8719dbda7c848005317594440bf615c886f2e17bd6b082d",
+            0,
+            bytes32(0)
+        );
+        super.setRelay(testFullRelay);
     }
 
     function dummyTransaction() public pure returns (BitcoinTx.Info memory) {
@@ -60,7 +65,7 @@ contract MarketPlaceTest is BtcMarketPlace, Test {
             bitcoinHeaders: abi.encodePacked(
                 hex"04000000e0879a33a87bf9481385adae91fa9e93713b932cbe8a09030000000000000000ee5ded948d805bb71bee5de25b447c42527898cac93eee1afe04663bb8204b358627fe56f4960618304a7db1",
                 hex"04000000c0de92e7326cb020b59ffc5998405e539863c57da088a7040000000000000000d8e7273d0198ba4f10dfd57d151327c32113fc244fd0587d161a5c5332a53651ed28fe56f4960618b24502cc"
-            )
+                )
         });
     }
 

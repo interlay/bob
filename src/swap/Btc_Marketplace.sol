@@ -6,12 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BTCUtils} from "@bob-collective/bitcoin-spv/BTCUtils.sol";
 import {BitcoinTx} from "../utils/BitcoinTx.sol";
 import {ERC2771Recipient} from "@opengsn/packages/contracts/src/ERC2771Recipient.sol";
-import {TestLightRelay} from "../relay/TestLightRelay.sol";
+import {TestFullRelay} from "../relay/TestFullRelay.sol";
 
 using SafeERC20 for IERC20;
 
 contract BtcMarketPlace is ERC2771Recipient {
-    using BitcoinTx for TestLightRelay;
+    using BitcoinTx for TestFullRelay;
 
     mapping(uint256 => BtcBuyOrder) public btcBuyOrders;
     mapping(uint256 => AcceptedBtcBuyOrder) public acceptedBtcBuyOrders;
@@ -21,17 +21,17 @@ contract BtcMarketPlace is ERC2771Recipient {
     uint256 nextOrderId;
     uint256 public constant REQUEST_EXPIRATION_SECONDS = 6 hours;
 
-    TestLightRelay internal testLightRelay;
+    TestFullRelay internal testFullRelay;
     uint256 internal txProofDifficultyFactor;
 
-    constructor(TestLightRelay _relay, address erc2771Forwarder) {
+    constructor(TestFullRelay _relay, address erc2771Forwarder) {
         _setTrustedForwarder(erc2771Forwarder);
         setRelay(_relay);
         txProofDifficultyFactor = 1;
     }
 
-    function setRelay(TestLightRelay _relay) internal {
-        testLightRelay = _relay;
+    function setRelay(TestFullRelay _relay) internal {
+        testFullRelay = _relay;
     }
 
     // TODO: should we merge buy&sell structs? They're structurally identical except for the
@@ -162,8 +162,8 @@ contract BtcMarketPlace is ERC2771Recipient {
 
         require(accept.requester == _msgSender());
 
-        testLightRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
-        testLightRelay.validateProof(txProofDifficultyFactor, transaction, proof);
+        testFullRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
+        testFullRelay.validateProof(txProofDifficultyFactor, transaction, proof);
 
         _checkBitcoinTxOutput(accept.amountBtc, accept.bitcoinAddress, transaction);
 
@@ -259,8 +259,8 @@ contract BtcMarketPlace is ERC2771Recipient {
 
         require(accept.accepter == _msgSender());
 
-        testLightRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
-        testLightRelay.validateProof(txProofDifficultyFactor, transaction, proof);
+        testFullRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
+        testFullRelay.validateProof(txProofDifficultyFactor, transaction, proof);
 
         BtcBuyOrder storage order = btcBuyOrders[accept.orderId];
         _checkBitcoinTxOutput(order.amountBtc, order.bitcoinAddress, transaction);

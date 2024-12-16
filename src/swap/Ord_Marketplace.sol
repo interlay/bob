@@ -5,12 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BTCUtils} from "@bob-collective/bitcoin-spv/BTCUtils.sol";
 import {BitcoinTx} from "../utils/BitcoinTx.sol";
-import {TestLightRelay} from "../relay/TestLightRelay.sol";
+import {TestFullRelay} from "../relay/TestFullRelay.sol";
 
 using SafeERC20 for IERC20;
 
 contract OrdMarketplace {
-    using BitcoinTx for TestLightRelay;
+    using BitcoinTx for TestFullRelay;
 
     mapping(uint256 => OrdinalSellOrder) public ordinalSellOrders;
     mapping(uint256 => AcceptedOrdinalSellOrder) public acceptedOrdinalSellOrders;
@@ -18,16 +18,16 @@ contract OrdMarketplace {
     uint256 nextOrdinalId;
     uint256 public constant REQUEST_EXPIRATION_SECONDS = 6 hours;
 
-    TestLightRelay internal testLightRelay;
+    TestFullRelay internal testFullRelay;
     uint256 internal txProofDifficultyFactor;
 
-    constructor(TestLightRelay _relay) {
+    constructor(TestFullRelay _relay) {
         setRelay(_relay);
         txProofDifficultyFactor = 1;
     }
 
-    function setRelay(TestLightRelay _relay) internal {
-        testLightRelay = _relay;
+    function setRelay(TestFullRelay _relay) internal {
+        testFullRelay = _relay;
     }
 
     event placeOrdinalSellOrderEvent(
@@ -124,8 +124,8 @@ contract OrdMarketplace {
 
         OrdinalSellOrder storage order = ordinalSellOrders[accept.orderId];
 
-        testLightRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
-        testLightRelay.validateProof(txProofDifficultyFactor, transaction, proof);
+        testFullRelay.setDifficultyFromHeaders(proof.bitcoinHeaders);
+        testFullRelay.validateProof(txProofDifficultyFactor, transaction, proof);
 
         BitcoinTx.ensureTxInputSpendsUtxo(transaction.inputVector, order.utxo);
 

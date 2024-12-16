@@ -8,7 +8,7 @@ import {SegWitUtils} from "@bob-collective/bitcoin-spv/SegWitUtils.sol";
 import {ValidateSPV} from "@bob-collective/bitcoin-spv/ValidateSPV.sol";
 
 import {BitcoinTx} from "./BitcoinTx.sol";
-import {IRelay} from "../relay/IRelay.sol";
+import {IFullRelay} from "../relay/FullRelayInterfaces.sol";
 
 library WitnessTx {
     using BTCUtils for bytes;
@@ -107,7 +107,7 @@ library WitnessTx {
     /// @param proof Bitcoin proof data.
     /// @return wTxHash Proven 32-byte transaction hash.
     function validateWitnessProofAndDifficulty(
-        IRelay relay,
+        IFullRelay relay,
         uint256 txProofDifficultyFactor,
         WitnessInfo memory txInfo,
         WitnessProof memory proof
