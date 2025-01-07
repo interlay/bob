@@ -50,7 +50,7 @@ contract BedrockStrategy is IStrategyWithSlippageArgs, Context {
         IERC20 uniBTC = IERC20(vault.uniBTC());
         uint256 uniBTCAmount = uniBTC.balanceOf(address(this));
         require(uniBTCAmount >= args.amountOutMin, "Insufficient output amount");
-
+        // ToDo: Missing corner case to check Insufficient supply provided.
         uniBTC.safeTransfer(recipient, uniBTCAmount);
 
         emit TokenOutput(address(uniBTC), uniBTCAmount);

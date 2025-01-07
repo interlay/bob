@@ -68,7 +68,7 @@ contract AvalonTBTCLendingStrategyForked is Test {
 // BOB_PROD_PUBLIC_RPC_URL=https://rpc.gobob.xyz/ forge test --match-contract AvalonWBTCLendingStrategyForked -vv
 
 contract AvalonWBTCLendingStrategyForked is Test {
-    // Instantiate TBTC token using its address from Constants
+    // Instantiate WBTC token using its address from Constants
     IERC20 token = IERC20(Constants.WBTC_ADDRESS);
 
     function setUp() public {
