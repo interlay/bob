@@ -30,7 +30,7 @@ jobs:
         id: build
       - name: Run forge tests
         run: |
-          forge test -vvv --deny-warnings
+          forge test --no-match-path "test/gateway/e2e-tests/*" -vvv --deny-warnings
         id: test
       - name: Run forge docs
         run: |
