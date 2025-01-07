@@ -71,7 +71,7 @@ contract BedrockStrategyTest is Test {
 
         BedrockStrategy bedrockStrategy = new BedrockStrategy(vault);
 
-        // Approve startagey to spend 100 tBTC tokens on behalf of this contract
+        // Approve strategy to spend 100 tBTC tokens on behalf of this contract
         wbtcToken.increaseAllowance(address(bedrockStrategy), 1 ether);
 
         vm.expectRevert("Insufficient output amount");
