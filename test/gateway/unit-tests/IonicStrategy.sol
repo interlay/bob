@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {stdStorage, StdStorage, Test, console} from "forge-std/Test.sol";
@@ -86,7 +86,7 @@ contract IonicStrategyTest is Test {
         IPool dummyIonicPool = new DummyIonicPool(true);
         IonicStrategy ionicStrategy = new IonicStrategy(ionicToken, dummyIonicPool);
 
-        // Approve strategy to spend 100 tBTC tokens on behalf of this contract
+        // Approve strategy to spend tokens on behalf of this contract
         wrappedBtcToken.increaseAllowance(address(ionicStrategy), 1 ether);
 
         vm.expectEmit();
