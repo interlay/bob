@@ -9,8 +9,12 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IAvalonIPool, AvalonLendingStrategy} from "../../../src/gateway/strategy/AvalonStrategy.sol";
+import {
+    IAvalonIPool, AvalonLendingStrategy, AvalonLstStrategy
+} from "../../../src/gateway/strategy/AvalonStrategy.sol";
 import {StrategySlippageArgs} from "../../../src/gateway/CommonStructs.sol";
+import {ISolvBTCRouter, SolvBTCStrategy, SolvLSTStrategy} from "../../../src/gateway/strategy/SolvStrategy.sol";
+import {DummySolvRouter} from "./SolvStrategy.sol";
 
 contract DummyPoolImplementation is IAvalonIPool {
     ArbitaryErc20 avalonToken;
@@ -49,17 +53,19 @@ contract ArbitaryErc20 is ERC20, Ownable {
     }
 }
 
-// forge test --match-contract AvalonLendingStrategyTest -vv
-contract AvalonLendingStrategyTest is Test {
+// forge test --match-contract AvalonStrategyTest -vv
+contract AvalonStrategyTest is Test {
     event TokenOutput(address tokenReceived, uint256 amountOut);
 
-    ArbitaryErc20 lendingToken;
+    ArbitaryErc20 wrappedBTC;
     ArbitaryErc20 avalonToken;
+    ArbitaryErc20 solvLST;
 
     function setUp() public {
-        lendingToken = new ArbitaryErc20("Lending Token", "Lending Token");
+        wrappedBTC = new ArbitaryErc20("Wrapped Token", "wt");
         avalonToken = new ArbitaryErc20("Avalon Token", "Avalon Token");
-        lendingToken.sudoMint(address(this), 100 ether); // Mint 100 tokens to this contract
+        solvLST = new ArbitaryErc20("Solv LST Token", "solv-lst");
+        wrappedBTC.sudoMint(address(this), 100 ether); // Mint 100 tokens to this contract
     }
 
     function testLendingStrategyForValidAmount() public {
@@ -69,16 +75,16 @@ contract AvalonLendingStrategyTest is Test {
         AvalonLendingStrategy avalonStrategy = new AvalonLendingStrategy(avalonToken, dummyPool);
 
         // Approve ionicStrategy to spend 100 tBTC tokens on behalf of this contract
-        lendingToken.increaseAllowance(address(avalonStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(avalonStrategy), 1 ether);
 
         vm.expectEmit();
         emit TokenOutput(address(avalonToken), 1 ether);
         avalonStrategy.handleGatewayMessageWithSlippageArgs(
-            lendingToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
 
         assertEq(avalonToken.balanceOf(vm.addr(1)), 1 ether);
-        assertEq(lendingToken.balanceOf(address(this)), 99 ether);
+        assertEq(wrappedBTC.balanceOf(address(this)), 99 ether);
     }
 
     function testWhenInsufficientSupplyProvided() public {
@@ -86,10 +92,10 @@ contract AvalonLendingStrategyTest is Test {
         AvalonLendingStrategy avalonStrategy = new AvalonLendingStrategy(avalonToken, dummyPool);
 
         // Approve ionicStrategy to spend 100 tBTC tokens on behalf of this contract
-        lendingToken.increaseAllowance(address(avalonStrategy), 100);
+        wrappedBTC.increaseAllowance(address(avalonStrategy), 100);
 
         vm.expectRevert("Insufficient supply provided");
-        avalonStrategy.handleGatewayMessageWithSlippageArgs(lendingToken, 100, vm.addr(1), StrategySlippageArgs(0));
+        avalonStrategy.handleGatewayMessageWithSlippageArgs(wrappedBTC, 100, vm.addr(1), StrategySlippageArgs(0));
     }
 
     function testWhenInsufficientOutputAmount() public {
@@ -99,23 +105,35 @@ contract AvalonLendingStrategyTest is Test {
         AvalonLendingStrategy avalonStrategy = new AvalonLendingStrategy(avalonToken, dummyPool);
 
         // Approve ionicStrategy to spend 100 tBTC tokens on behalf of this contract
-        lendingToken.increaseAllowance(address(avalonStrategy), 100);
+        wrappedBTC.increaseAllowance(address(avalonStrategy), 100);
 
         vm.expectRevert("Insufficient output amount");
-        avalonStrategy.handleGatewayMessageWithSlippageArgs(
-            lendingToken, 100, vm.addr(1), StrategySlippageArgs(100 + 1)
-        );
+        avalonStrategy.handleGatewayMessageWithSlippageArgs(wrappedBTC, 100, vm.addr(1), StrategySlippageArgs(100 + 1));
     }
-}
 
-// forge test --match-contract AvalonLstStrategyTest -vv
-contract AvalonLstStrategyTest is Test {
-    event TokenOutput(address tokenReceived, uint256 amountOut);
+    function testAvalonLSTStrategyForValidAmount() public {
+        ISolvBTCRouter btcRouter = new DummySolvRouter(true, wrappedBTC);
+        ISolvBTCRouter lstRouter = new DummySolvRouter(true, solvLST);
+        SolvLSTStrategy solvStrategy =
+            new SolvLSTStrategy(btcRouter, lstRouter, bytes32(0), bytes32(0), wrappedBTC, solvLST);
 
-    ArbitaryErc20 lendingToken;
-    ArbitaryErc20 avalonToken;
+        wrappedBTC.sudoMint(address(btcRouter), 1 ether);
+        solvLST.sudoMint(address(lstRouter), 1 ether);
 
-    function setUp() public {
-        //ToDo: When solv lst stragey unit test completed
+        IAvalonIPool dummyPool = new DummyPoolImplementation(avalonToken, true);
+        avalonToken.sudoMint(address(dummyPool), 100 ether); // Mint 100 tokens to this contract
+
+        AvalonLendingStrategy avalonLendingStrategy = new AvalonLendingStrategy(avalonToken, dummyPool);
+
+        AvalonLstStrategy avalonLSTStrategy = new AvalonLstStrategy(solvStrategy, avalonLendingStrategy);
+
+        // Approve ionicStrategy to spend 100 tBTC tokens on behalf of this contract
+        wrappedBTC.increaseAllowance(address(avalonLSTStrategy), 1 ether);
+
+        vm.expectEmit();
+        emit TokenOutput(address(avalonToken), 1 ether);
+        avalonLSTStrategy.handleGatewayMessageWithSlippageArgs(
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+        );
     }
 }
