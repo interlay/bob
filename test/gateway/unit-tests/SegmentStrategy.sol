@@ -8,13 +8,6 @@ using stdStorage for StdStorage;
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {
-    IPellStrategyManager,
-    IPellStrategy,
-    PellStrategy,
-    PellBedrockStrategy,
-    PellSolvLSTStrategy
-} from "../../../src/gateway/strategy/PellStrategy.sol";
-import {
     ISeBep20,
     SegmentStrategy,
     SegmentBedrockStrategy,
@@ -23,33 +16,32 @@ import {
 import {IBedrockVault, BedrockStrategy} from "../../../src/gateway/strategy/BedrockStrategy.sol";
 import {SolvLSTStrategy, ISolvBTCRouter} from "../../../src/gateway/strategy/SolvStrategy.sol";
 import {StrategySlippageArgs} from "../../../src/gateway/CommonStructs.sol";
-import {ArbitaryErc20} from "./AvalonStrategy.sol";
+import {ArbitaryErc20} from "./Utils.sol";
 import {DummyBedrockVaultImplementation} from "./BedrockStrategy.sol";
 import {DummySolvRouter} from "./SolvStrategy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-// ToDo: if same as ionic move to utils
 contract DummySeBep20 is ISeBep20, ERC20, Ownable {
     bool private doMint;
-    bool private doNotMintDoNotPassAError;
+    bool private suppressMintError;
 
-    constructor(string memory name_, string memory symbol_, bool _doMint, bool _doNotMintDoNotPassAError)
+    constructor(string memory name_, string memory symbol_, bool _doMint, bool _suppressMintError)
         ERC20(name_, symbol_)
     {
         doMint = _doMint;
-        doNotMintDoNotPassAError = _doNotMintDoNotPassAError;
+        suppressMintError = _suppressMintError;
     }
 
     function sudoMint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
 
-    function mint(uint256 mintAmount) external override returns (uint256) {
+    function mint(uint256 /*mintAmount*/ ) external pure override returns (uint256) {
         return 0;
     }
 
     function mintBehalf(address receiver, uint256 mintAmount) external override returns (uint256) {
-        if (doNotMintDoNotPassAError) {
+        if (suppressMintError) {
             return 0;
         }
         if (doMint) {
@@ -59,17 +51,17 @@ contract DummySeBep20 is ISeBep20, ERC20, Ownable {
         return 1;
     }
 
-    function balanceOfUnderlying(address owner) external override returns (uint256) {
+    function balanceOfUnderlying(address /*owner*/ ) external pure override returns (uint256) {
         return 0;
     }
 
-    function redeem(uint256 redeemTokens) external override returns (uint256) {
+    function redeem(uint256 /*redeemTokens*/ ) external pure override returns (uint256) {
         return 0;
     }
 }
 
 contract SegmentStrategyTest is Test {
-    ArbitaryErc20 wrappedBtcToken;
+    ArbitaryErc20 wrappedBTC;
     ArbitaryErc20 uniBtcToken;
     ArbitaryErc20 solvBTC;
     ArbitaryErc20 solvLST;
@@ -77,11 +69,11 @@ contract SegmentStrategyTest is Test {
     event TokenOutput(address tokenReceived, uint256 amountOut);
 
     function setUp() public {
-        wrappedBtcToken = new ArbitaryErc20("Wrapped Token", "wt");
-        uniBtcToken = new ArbitaryErc20("uniBtc", "ut");
-        solvBTC = new ArbitaryErc20("Solv Token", "solv");
-        solvLST = new ArbitaryErc20("Solv LST Token", "solv-lst");
-        wrappedBtcToken.sudoMint(address(this), 100 ether);
+        wrappedBTC = new ArbitaryErc20("", "");
+        uniBtcToken = new ArbitaryErc20("", "");
+        solvBTC = new ArbitaryErc20("", "");
+        solvLST = new ArbitaryErc20("", "");
+        wrappedBTC.sudoMint(address(this), 100 ether);
     }
 
     function testSegmentStrategy() public {
@@ -90,12 +82,12 @@ contract SegmentStrategyTest is Test {
         SegmentStrategy segmentStrategy = new SegmentStrategy(seBep20);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentStrategy), 1 ether);
 
         vm.expectEmit();
         emit TokenOutput(address(seBep20), 1 ether);
         segmentStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
     }
 
@@ -104,11 +96,11 @@ contract SegmentStrategyTest is Test {
         SegmentStrategy segmentStrategy = new SegmentStrategy(seBep20);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentStrategy), 1 ether);
 
         vm.expectRevert("Could not mint token");
         segmentStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
     }
 
@@ -117,11 +109,11 @@ contract SegmentStrategyTest is Test {
         SegmentStrategy segmentStrategy = new SegmentStrategy(seBep20);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentStrategy), 1 ether);
 
         vm.expectRevert("Insufficient supply provided");
         segmentStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
     }
 
@@ -130,11 +122,11 @@ contract SegmentStrategyTest is Test {
         SegmentStrategy segmentStrategy = new SegmentStrategy(seBep20);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentStrategy), 1 ether);
 
         vm.expectRevert("Insufficient output amount");
         segmentStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(2 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(2 ether)
         );
     }
 
@@ -150,12 +142,12 @@ contract SegmentStrategyTest is Test {
         SegmentBedrockStrategy segmentBedrockStrategy = new SegmentBedrockStrategy(bedrockStrategy, segmentStrategy);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentBedrockStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentBedrockStrategy), 1 ether);
 
         vm.expectEmit();
         emit TokenOutput(address(seBep20), 1 ether);
         segmentBedrockStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
     }
 
@@ -173,12 +165,12 @@ contract SegmentStrategyTest is Test {
         SegmentSolvLSTStrategy segmentSolvLSTStrategy = new SegmentSolvLSTStrategy(solvLSTAtrategy, segmentStrategy);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(segmentSolvLSTStrategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(segmentSolvLSTStrategy), 1 ether);
 
         vm.expectEmit();
         emit TokenOutput(address(seBep20), 1 ether);
         segmentSolvLSTStrategy.handleGatewayMessageWithSlippageArgs(
-            wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
+            wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether)
         );
     }
 }

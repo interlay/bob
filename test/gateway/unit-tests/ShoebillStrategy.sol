@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.13;
 
 import {stdStorage, StdStorage, Test, console} from "forge-std/Test.sol";
 
@@ -9,18 +9,15 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {ICErc20, ShoebillStrategy} from "../../../src/gateway/strategy/ShoebillStrategy.sol";
 import {StrategySlippageArgs} from "../../../src/gateway/CommonStructs.sol";
-import {ArbitaryErc20} from "./AvalonStrategy.sol";
+import {ArbitaryErc20} from "./Utils.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract DummyShoeBillToken is ICErc20, ERC20, Ownable {
     bool private doMint;
     bool private mintInsufficientAmount;
 
-    constructor(string memory name_, string memory symbol_, bool _doMint, bool _mintInsufficientAmount)
-        ERC20(name_, symbol_)
-    {
+    constructor(string memory name_, string memory symbol_, bool _doMint) ERC20(name_, symbol_) {
         doMint = _doMint;
-        mintInsufficientAmount = _mintInsufficientAmount;
     }
 
     function sudoMint(address to, uint256 amount) public onlyOwner {
@@ -28,9 +25,6 @@ contract DummyShoeBillToken is ICErc20, ERC20, Ownable {
     }
 
     function mint(uint256 mintAmount) external returns (uint256) {
-        if (mintInsufficientAmount) {
-            return 0;
-        }
         if (doMint) {
             _mint(_msgSender(), mintAmount);
             return 0;
@@ -38,54 +32,52 @@ contract DummyShoeBillToken is ICErc20, ERC20, Ownable {
         return 1;
     }
 
-    function balanceOfUnderlying(address owner) external returns (uint256) {
+    function balanceOfUnderlying(address /*owner*/ ) external pure returns (uint256) {
         return 0;
     }
 }
 
-// forge test --match-contract ShoebillStrategyTest -vv
 contract ShoebillStrategyTest is Test {
     ICErc20 shoeBillToken;
-    ArbitaryErc20 wrappedBtcToken;
+    ArbitaryErc20 wrappedBTC;
 
     event TokenOutput(address tokenReceived, uint256 amountOut);
 
     function setUp() public {
-        shoeBillToken = new DummyShoeBillToken("Shoebill Token", "shoe", true, false);
-        wrappedBtcToken = new ArbitaryErc20("Wrapped Token", "wt");
-        wrappedBtcToken.sudoMint(address(this), 100 ether); // Mint 100 tokens to this contract
+        shoeBillToken = new DummyShoeBillToken("", "", true);
+        wrappedBTC = new ArbitaryErc20("", "");
+        wrappedBTC.sudoMint(address(this), 100 ether); // Mint 100 tokens to this contract
     }
 
     function testShoeBillStrategy() public {
         ShoebillStrategy strategy = new ShoebillStrategy(shoeBillToken);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(strategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(strategy), 1 ether);
 
         vm.expectEmit();
         emit TokenOutput(address(shoeBillToken), 1 ether);
-        strategy.handleGatewayMessageWithSlippageArgs(wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(0));
+        strategy.handleGatewayMessageWithSlippageArgs(wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether));
     }
 
     function testUnableToMintShoeBillToken() public {
-        shoeBillToken = new DummyShoeBillToken("Shoebill Token", "shoe", false, false);
+        shoeBillToken = new DummyShoeBillToken("", "", false);
         ShoebillStrategy strategy = new ShoebillStrategy(shoeBillToken);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(strategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(strategy), 1 ether);
 
         vm.expectRevert("Could not mint token");
-        strategy.handleGatewayMessageWithSlippageArgs(wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(0));
+        strategy.handleGatewayMessageWithSlippageArgs(wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(1 ether));
     }
 
     function testMintedInsufficientAmountOfShoeBillToken() public {
-        shoeBillToken = new DummyShoeBillToken("Shoebill Token", "shoe", false, true);
         ShoebillStrategy strategy = new ShoebillStrategy(shoeBillToken);
 
         // Approve strategy to spend tokens on behalf of this contract
-        wrappedBtcToken.increaseAllowance(address(strategy), 1 ether);
+        wrappedBTC.increaseAllowance(address(strategy), 1 ether);
 
         vm.expectRevert("Insufficient output amount");
-        strategy.handleGatewayMessageWithSlippageArgs(wrappedBtcToken, 1 ether, vm.addr(1), StrategySlippageArgs(1));
+        strategy.handleGatewayMessageWithSlippageArgs(wrappedBTC, 1 ether, vm.addr(1), StrategySlippageArgs(2 ether));
     }
 }
