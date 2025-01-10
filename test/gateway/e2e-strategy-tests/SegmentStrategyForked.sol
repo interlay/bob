@@ -23,36 +23,26 @@ import {IBedrockVault, BedrockStrategy} from "../../../src/gateway/strategy/Bedr
 import {SolvLSTStrategy, ISolvBTCRouter} from "../../../src/gateway/strategy/SolvStrategy.sol";
 import {StrategySlippageArgs} from "../../../src/gateway/CommonStructs.sol";
 import {Constants} from "./Constants.sol";
+import {ForkedStrategyTemplateTbtc, ForkedStrategyTemplateWbtc} from "./ForkedTemplate.sol";
 
-contract SegmentStrategyForked is Test {
-    // Instantiate TBTC token using its address from Constants
-    IERC20 token = IERC20(Constants.TBTC_ADDRESS);
-
+// Command to run this contract tests with Foundry:
+// BOB_PROD_PUBLIC_RPC_URL=https://rpc.gobob.xyz/ forge test --match-contract SegmentStrategyForked -vv
+contract SegmentStrategyForked is ForkedStrategyTemplateTbtc {
     function setUp() public {
-        // Set up the test environment by creating a fork of the BOB_PROD_PUBLIC_RPC_URL
-        // Fixing the block number ensures reproducible test results
-        vm.createSelectFork(vm.envString("BOB_PROD_PUBLIC_RPC_URL"), 5607192);
-
-        // Transfer 100 TBTC tokens to DUMMY_SENDER
-        vm.prank(0xa79a356B01ef805B3089b4FE67447b96c7e6DD4C);
-        token.transfer(Constants.DUMMY_SENDER, 100 ether);
-        vm.stopPrank();
+        super.simulateForkAndTransfer(
+            5607192, address(0xa79a356B01ef805B3089b4FE67447b96c7e6DD4C), Constants.DUMMY_SENDER, 1 ether
+        );
     }
 
     function testSegmentStrategy() public {
         ISeBep20 seBep20 = ISeBep20(0xD30288EA9873f376016A0250433b7eA375676077);
         SegmentStrategy strategy = new SegmentStrategy(seBep20);
 
-        vm.prank(Constants.DUMMY_SENDER);
+        vm.startPrank(Constants.DUMMY_SENDER);
         token.approve(address(strategy), 1 ether);
 
-        vm.prank(Constants.DUMMY_SENDER);
-        strategy.handleGatewayMessageWithSlippageArgs(
-            token,
-            1 ether, // Amount: 1 TBTC
-            Constants.DUMMY_RECEIVER,
-            StrategySlippageArgs(0) // No slippage allowed
-        );
+        strategy.handleGatewayMessageWithSlippageArgs(token, 1 ether, Constants.DUMMY_RECEIVER, StrategySlippageArgs(0));
+        vm.stopPrank();
 
         uint256 userSeBalance = IERC20(address(seBep20)).balanceOf(Constants.DUMMY_RECEIVER);
         assertGt(userSeBalance, 0, "User has seTokens");
@@ -65,19 +55,13 @@ contract SegmentStrategyForked is Test {
     }
 }
 
-contract SegmentBedrockAndLstStrategyForked is Test {
-    // Instantiate WBTC token using its address from Constants
-    IERC20 token = IERC20(Constants.WBTC_ADDRESS);
-
+// Command to run this contract tests with Foundry:
+// BOB_PROD_PUBLIC_RPC_URL=https://rpc.gobob.xyz/ forge test --match-contract SegmentBedrockAndLstStrategyForked -vv
+contract SegmentBedrockAndLstStrategyForked is ForkedStrategyTemplateWbtc {
     function setUp() public {
-        // Set up the test environment by creating a fork of the BOB_PROD_PUBLIC_RPC_URL
-        // Fixing the block number ensures reproducible test results
-        vm.createSelectFork(vm.envString("BOB_PROD_PUBLIC_RPC_URL"), 6945930);
-
-        // Transfer 100 WBTC tokens to DUMMY_SENDER
-        vm.prank(0x5A8E9774d67fe846C6F4311c073e2AC34b33646F);
-        token.transfer(Constants.DUMMY_SENDER, 100 * 1e8);
-        vm.stopPrank();
+        super.simulateForkAndTransfer(
+            6945930, address(0x5A8E9774d67fe846C6F4311c073e2AC34b33646F), Constants.DUMMY_SENDER, 1e8
+        );
     }
 
     function testSegmentBedrockStrategy() public {

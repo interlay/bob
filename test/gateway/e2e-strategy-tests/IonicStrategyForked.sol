@@ -9,22 +9,15 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IIonicToken, IPool, IonicStrategy} from "../../../src/gateway/strategy/IonicStrategy.sol";
 import {StrategySlippageArgs} from "../../../src/gateway/CommonStructs.sol";
 import {Constants} from "./Constants.sol";
+import {ForkedStrategyTemplateTbtc} from "./ForkedTemplate.sol";
 
-// Command to run this test with Foundry:
+// Command to run this contract tests with Foundry:
 // BOB_PROD_PUBLIC_RPC_URL=https://rpc.gobob.xyz/ forge test --match-contract IonicStrategyForked -vv
-contract IonicStrategyForked is Test {
-    // Instantiate TBTC token using its address from Constants
-    IERC20 token = IERC20(Constants.TBTC_ADDRESS);
-
+contract IonicStrategyForked is ForkedStrategyTemplateTbtc {
     function setUp() public {
-        // Set up the test environment by creating a fork of the BOB_PROD_PUBLIC_RPC_URL
-        // Fixing the block number ensures reproducible test results
-        vm.createSelectFork(vm.envString("BOB_PROD_PUBLIC_RPC_URL"), 6077077);
-
-        // Transfer 100 TBTC tokens to DUMMY_SENDER
-        vm.prank(0xa79a356B01ef805B3089b4FE67447b96c7e6DD4C);
-        token.transfer(Constants.DUMMY_SENDER, 100 ether);
-        vm.stopPrank();
+        super.simulateForkAndTransfer(
+            6077077, address(0xa79a356B01ef805B3089b4FE67447b96c7e6DD4C), Constants.DUMMY_SENDER, 1 ether
+        );
     }
 
     function testIonicStrategy() public {
@@ -37,14 +30,8 @@ contract IonicStrategyForked is Test {
         // Instantiate the strategy
         IonicStrategy ionicStrategy = new IonicStrategy(iontBtcToken, poolContract);
 
-        // DUMMY_SENDER approves the strategy contract to spend 1 WBTC on their behalf
-        vm.prank(Constants.DUMMY_SENDER);
+        vm.startPrank(Constants.DUMMY_SENDER);
         token.approve(address(ionicStrategy), 1 ether);
-        vm.stopPrank();
-        console.log("balance 1:", IERC20(address(iontBtcToken)).balanceOf(Constants.DUMMY_RECEIVER));
-
-        // DUMMY_SENDER sends 1 WBTC to the strategy with slippage arguments
-        vm.prank(Constants.DUMMY_SENDER);
         ionicStrategy.handleGatewayMessageWithSlippageArgs(
             token,
             1 ether, // Amount: 1 TBTC
