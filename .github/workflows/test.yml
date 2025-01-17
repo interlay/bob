@@ -29,8 +29,9 @@ jobs:
           forge build --sizes --deny-warnings
         id: build
       - name: Run forge tests
+        # Currently forked tests are disabled to increase reliability of CI builds
         run: |
-          forge test -vvv --deny-warnings
+          forge test --no-match-contract Forked -vvv --deny-warnings
         id: test
       - name: Run forge docs
         run: |

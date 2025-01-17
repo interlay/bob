@@ -28,14 +28,19 @@ def parse_inherits(md_content):
     return None
 
 # Function to replace paths inside brackets with empty brackets
-def replace_paths_with_empty_brackets(line):
+def replace_paths_with_empty_brackets(line,file_path):
     def replace_path(match):
         default_path = 'docs/docs/src'
         path = default_path + match.group(0)[1:-1]  # Remove parentheses
         start = "docs/docs/src/src/X/X/"
         relative_path = os.path.relpath(path, start)
         print(f"Original Path: {relative_path}")
-        return '(' + relative_path + ')'
+        # If the file being processed is under the '/src/gateway/strategy/' directory,
+        # prepend '../' to the relative path to adjust for the directory level difference
+        if '/src/gateway/strategy/' in file_path:
+            return '(../' + relative_path + ')'
+        else:
+            return '(' + relative_path + ')'
     return re.sub(r'\([^)]+\)', replace_path, line)
 
 # Function to process a single Markdown file
@@ -48,7 +53,7 @@ def process_md_file(file_path):
 
     # Modify the Inherits line
     if inherits:
-        modified_inherits = replace_paths_with_empty_brackets(inherits)
+        modified_inherits = replace_paths_with_empty_brackets(inherits,file_path)
         md_content = md_content.replace(inherits, modified_inherits)
 
     md_content = replace_git_sources(md_content)
