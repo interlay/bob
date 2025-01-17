@@ -2,10 +2,17 @@ import { vi, describe, it, assert, Mock, expect, beforeEach } from 'vitest';
 import { AddressType, getAddressInfo, Network } from 'bitcoin-address-validation';
 import { Address, NETWORK, OutScript, Script, Transaction, p2sh, p2wpkh, selectUTXO } from '@scure/btc-signer';
 import { hex, base64 } from '@scure/base';
-import { createBitcoinPsbt, getInputFromUtxoAndTx, estimateTxFee, Input, getBalance } from '../src/wallet/utxo';
+import {
+    createBitcoinPsbt,
+    getInputFromUtxoAndTx,
+    estimateTxFee,
+    Input,
+    getBalance,
+    findSafeUtxos,
+} from '../src/wallet/utxo';
 import { TransactionOutput } from '@scure/btc-signer/psbt';
 import { OrdinalsClient, OutPoint } from '../src/ordinal-api';
-import { EsploraClient } from '../src/esplora';
+import { EsploraClient, UTXO } from '../src/esplora';
 
 vi.mock(import('@scure/btc-signer'), async (importOriginal) => {
     const actual = await importOriginal();
@@ -16,29 +23,11 @@ vi.mock(import('@scure/btc-signer'), async (importOriginal) => {
     };
 });
 
-vi.mock(import('../src/ordinal-api'), async (importOriginal) => {
-    const actual = await importOriginal();
-
-    actual.OrdinalsClient.prototype.getOutputsFromAddress = vi.fn(
-        actual.OrdinalsClient.prototype.getOutputsFromAddress
-    );
-
-    return actual;
-});
-
-vi.mock(import('../src/esplora'), async (importOriginal) => {
-    const actual = await importOriginal();
-
-    actual.EsploraClient.prototype.getAddressUtxos = vi.fn(actual.EsploraClient.prototype.getAddressUtxos);
-
-    return actual;
-});
-
 // TODO: Add more tests using https://github.com/paulmillr/scure-btc-signer/tree/5ead71ea9a873d8ba1882a9cd6aa561ad410d0d1/test/bitcoinjs-test/fixtures/bitcoinjs
 // TODO: Ensure that the paymentAddresses have sufficient funds to create the transaction
 describe('UTXO Tests', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('should spend from address to create a transaction with an OP return output', { timeout: 50000 }, async () => {
@@ -348,7 +337,8 @@ describe('UTXO Tests', () => {
 
                                 // If the amount is undefined, the fee should be estimated
                                 const fee = await estimateTxFee(paymentAddress, amount, pubkey, opReturn, feeRate);
-                                assert(fee > 0, 'Fee should be greater than 0');
+
+                                expect(fee).toBeGreaterThan(0);
                             })
                         )
                     )
@@ -397,7 +387,7 @@ describe('UTXO Tests', () => {
                         })
                     )
             )
-        ).toStrictEqual([]);
+        ).toEqual([]);
     });
 
     it('throws an error if insufficient balance', { timeout: 50000 }, async () => {
@@ -416,7 +406,7 @@ describe('UTXO Tests', () => {
         );
     });
 
-    it('should return address balance', async () => {
+    it('should return address balance', { timeout: 50000 }, async () => {
         const address = 'bc1peqr5a5kfufvsl66444jm9y8qq0s87ph0zv4lfkcs7h40ew02uvsqkhjav0';
 
         const balance = await getBalance(address);
@@ -436,7 +426,7 @@ describe('UTXO Tests', () => {
         assert(zeroBalance.total === 0n, 'If no address specified total must be 0');
     });
 
-    it('returns smalled amount if address holds ordinals', async () => {
+    it('outputs could not be spent if not confirmed by ord service and indexed', { timeout: 50000 }, async () => {
         const taprootAddress = 'bc1peqr5a5kfufvsl66444jm9y8qq0s87ph0zv4lfkcs7h40ew02uvsqkhjav0';
 
         const esploraClient = new EsploraClient('mainnet');
@@ -454,17 +444,222 @@ describe('UTXO Tests', () => {
         }, 0);
 
         // mock half of the UTXOs contain inscriptions or runes
-        (OrdinalsClient.prototype.getOutputsFromAddress as Mock).mockResolvedValueOnce(
+        vi.spyOn(OrdinalsClient.prototype, 'getOutputsFromAddress').mockResolvedValueOnce(
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
             outputs.slice(Math.ceil(outputs.length / 2)).map((output) => {
                 const outpoint = OutPoint.toString(output);
 
                 return { outpoint };
             })
         );
+        // mark every requested output as indexed
+        // will not be a part of `cardinalOutputsSet` -- could not be spent
+        vi.spyOn(OrdinalsClient.prototype, 'getOutputsFromOutPoints').mockResolvedValue(
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            Array.from(outputs, () => ({ indexed: true, inscriptions: [], runes: {} }))
+        );
 
         const balanceData = await getBalance(taprootAddress);
 
-        expect(balanceData.total).toBeLessThan(total);
-        expect(balanceData.confirmed).toBeLessThan(confirmed);
+        expect(balanceData.total).toBeLessThan(BigInt(total));
+        expect(balanceData.confirmed).toBeLessThan(BigInt(confirmed));
+    });
+
+    it(
+        'outputs could not be spent if not confirmed by ord service, not indexed and contain runes or inscriptions',
+        { timeout: 50000 },
+        async () => {
+            const taprootAddress = 'bc1peqr5a5kfufvsl66444jm9y8qq0s87ph0zv4lfkcs7h40ew02uvsqkhjav0';
+
+            const esploraClient = new EsploraClient('mainnet');
+
+            const outputs = await esploraClient.getAddressUtxos(taprootAddress);
+
+            const total = outputs.reduce((acc, output) => acc + output.value, 0);
+
+            const confirmed = outputs.reduce((acc, output) => {
+                if (output.confirmed) {
+                    return acc + output.value;
+                }
+
+                return acc;
+            }, 0);
+
+            // mock half of the UTXOs contain inscriptions or runes
+            vi.spyOn(OrdinalsClient.prototype, 'getOutputsFromAddress').mockResolvedValueOnce(
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                outputs.slice(Math.ceil(outputs.length / 2)).map((output) => {
+                    const outpoint = OutPoint.toString(output);
+
+                    return { outpoint };
+                })
+            );
+            // mark every requested output as not indexed and containing inscriptions -- not cardinal
+            // will not be a part of `cardinalOutputsSet` -- could not be spent
+            vi.spyOn(OrdinalsClient.prototype, 'getOutputsFromOutPoints').mockResolvedValue(
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                Array.from(outputs, () => ({ indexed: false, inscriptions: [null], runes: {} }))
+            );
+
+            // no inputs otherwise will loop infinitely
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            vi.spyOn(EsploraClient.prototype, 'getTransaction').mockResolvedValue({
+                status: {
+                    confirmed: true,
+                },
+                vin: [],
+            });
+
+            const balanceData = await getBalance(taprootAddress);
+
+            expect(balanceData.total).toEqual(BigInt(total));
+            expect(balanceData.confirmed).toEqual(BigInt(confirmed));
+        }
+    );
+
+    // coinbase reached
+    it(
+        'outputs could be spent if not confirmed by ord service, not indexed and does not contain runes or inscriptions',
+        { timeout: 50000 },
+        async () => {
+            const taprootAddress = 'bc1peqr5a5kfufvsl66444jm9y8qq0s87ph0zv4lfkcs7h40ew02uvsqkhjav0';
+
+            const esploraClient = new EsploraClient('mainnet');
+
+            const outputs = await esploraClient.getAddressUtxos(taprootAddress);
+
+            const total = outputs.reduce((acc, output) => acc + output.value, 0);
+
+            const confirmed = outputs.reduce((acc, output) => {
+                if (output.confirmed) {
+                    return acc + output.value;
+                }
+
+                return acc;
+            }, 0);
+
+            // mock half of the UTXOs contain inscriptions or runes
+            vi.spyOn(OrdinalsClient.prototype, 'getOutputsFromAddress').mockResolvedValueOnce(
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                outputs.slice(Math.ceil(outputs.length / 2)).map((output) => {
+                    const outpoint = OutPoint.toString(output);
+
+                    return { outpoint };
+                })
+            );
+            // mark every requested output as not indexed and not containing inscriptions or runes
+            vi.spyOn(OrdinalsClient.prototype, 'getInscriptionsFromOutPoint').mockResolvedValue(
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                { indexed: false, inscriptions: [], runes: {} }
+            );
+
+            // no inputs otherwise will loop infinitely
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            vi.spyOn(EsploraClient.prototype, 'getTransaction').mockResolvedValue({
+                status: {
+                    confirmed: false,
+                },
+                vin: [],
+            });
+
+            const balanceData = await getBalance(taprootAddress);
+
+            expect(balanceData.total).toEqual(BigInt(total));
+            expect(balanceData.confirmed).toEqual(BigInt(confirmed));
+        }
+    );
+
+    it('processes utxo correctly', { timeout: 50000 }, async () => {
+        const esploraClient = new EsploraClient('mainnet');
+        const ordinalsClient = new OrdinalsClient('mainnet');
+
+        const utxos: UTXO[] = [
+            // regular tx
+            // part of cardinals set
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/4871cc57fb9dd5359c4d0ef5352b83a21bb7d25729fce56ea8e3aa3c8ff14049:1"
+            {
+                confirmed: true,
+                txid: '4871cc57fb9dd5359c4d0ef5352b83a21bb7d25729fce56ea8e3aa3c8ff14049',
+                value: 1,
+                vout: 1,
+            },
+            // regular tx, mocked in esplora call
+            // not confirmed & not in cardinals set -> check inputs
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/c63275cb82afe248315dcc9534043c16b43471cefd76fdb1c7ae53d71168a3af:1"
+            {
+                confirmed: false,
+                txid: 'c63275cb82afe248315dcc9534043c16b43471cefd76fdb1c7ae53d71168a3af',
+                value: 1,
+                vout: 1,
+            },
+            // regular tx
+            // 4 `vin`s, 1 contains inscription
+            // not confirmed & not included in cardinals set -> check inputs (can not be spent)
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/1de1e2025afaa055b4174c7da4646db9a67035666ed64e26420364a15320c217:4"
+            {
+                confirmed: false,
+                txid: '1de1e2025afaa055b4174c7da4646db9a67035666ed64e26420364a15320c217',
+                value: 1,
+                vout: 4,
+            },
+            // transfer inscription
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/200bead2c2484d69fabffbda3ec55af7f3d809200b53c4d06ac443925df004ef:1"
+            {
+                confirmed: true,
+                txid: '200bead2c2484d69fabffbda3ec55af7f3d809200b53c4d06ac443925df004ef',
+                value: 1,
+                vout: 1,
+            },
+            // rune transfer
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/b4e912281e8c7b8588adcf1cd0ea8b0bb5f492ea3f008f3ec351f99bdd5f833d:1"
+            {
+                confirmed: true,
+                txid: 'b4e912281e8c7b8588adcf1cd0ea8b0bb5f492ea3f008f3ec351f99bdd5f833d',
+                value: 1,
+                vout: 1,
+            },
+        ];
+
+        const cardinalOutputsSet = new Set([
+            '4871cc57fb9dd5359c4d0ef5352b83a21bb7d25729fce56ea8e3aa3c8ff14049:1',
+
+            // vin for utxo[1]
+            // https://btc-mainnet.gobob.xyz/tx/c63275cb82afe248315dcc9534043c16b43471cefd76fdb1c7ae53d71168a3af
+            '8eafa7525377d4b9bafd16c39410f66d3b3a1667d9ba643dbaefe66f8682d35a:1',
+
+            // 4 `vin`s for utxo[2]
+            // https://btc-mainnet.gobob.xyz/tx/1de1e2025afaa055b4174c7da4646db9a67035666ed64e26420364a15320c217
+            'bd4a3f8c3e836f8ac14756e9b745eea8b3e6374d52e96ab3133dc4ea3d82c0e2:4',
+            '4902cc605ccd829554a32fe730ec174c4ea626a2c4676adbb2d13d243785af63:5',
+            // contains inscriptions
+            // curl -s -H "Accept: application/json" "https://ordinals-mainnet.gobob.xyz/output/8d336ca4f129b6590fa9ed5e6a0bc46de74f586a11ce8c8d72900e3311c9d773:0"
+            // '8d336ca4f129b6590fa9ed5e6a0bc46de74f586a11ce8c8d72900e3311c9d773:0',
+            '81fdaeb84ca992a5f9d0c27fc7ba861aed15dbf0285ed1e01367fa461f091899:19',
+        ]);
+
+        const original = EsploraClient.prototype.getTransaction;
+
+        vi.spyOn(EsploraClient.prototype, 'getTransaction').mockImplementation(async function (tx) {
+            const result = await original.call(this, tx);
+
+            // mark as unconfirmed -> continue building tree for `vin`s
+            if (tx === utxos[1].txid || tx === utxos[2].txid) {
+                result.status.confirmed = false;
+            }
+
+            return result;
+        });
+
+        const allowedUtxos = await findSafeUtxos(utxos, cardinalOutputsSet, esploraClient, ordinalsClient);
+
+        expect(allowedUtxos).toEqual([utxos[0], utxos[1]]);
     });
 });

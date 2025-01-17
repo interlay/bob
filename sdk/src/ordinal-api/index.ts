@@ -477,18 +477,18 @@ export class OrdinalsClient {
     }
 
     /**
-     * Retrieves inscriptions based on the address.
+     * Retrieves outputs based on the address.
      * @param {String} address - The Bitcoin address to check.
      * @param {('cardinal' | 'inscribed' | 'runic' | 'any')} [type] - Optional type of UTXOs to be returned. If omitted returns all UTXOs.
-     * @returns {Promise<OutputJson>} A Promise that resolves to the inscription data.
+     * @returns {Promise<OutputJson[]>} A Promise that resolves to the list of output data.
      *
      * @example
      * ```typescript
      * const client = new OrdinalsClient("regtest");
      * const address: string = "enter_address_here";
      * const type: 'cardinal' | 'inscribed' | 'runic' = "enter_type_here";
-     * const output = await client.getOutputsFromAddress(address, type?);
-     * console.log("Output:", output);
+     * const outputs = await client.getOutputsFromAddress(address, type?);
+     * console.log("Outputs:", outputs);
      * ```
      */
     getOutputsFromAddress(address: string, type?: 'cardinal' | 'inscribed' | 'runic' | 'any'): Promise<OutputJson[]> {
@@ -496,6 +496,24 @@ export class OrdinalsClient {
         if (type) searchParams.append('type', type);
         // https://docs.ordinals.com/guides/api.html#description-19
         return this.getJson<OutputJson[]>(`${this.basePath}/outputs/${address}?${searchParams}`);
+    }
+
+    /**
+     * Retrieves outputs based on the out points list.
+     * @param {string[]} outpoints - The list of out points to check.
+     * @returns {Promise<OutputJson[]>} A Promise that resolves to the list of output data.
+     *
+     * @example
+     * ```typescript
+     * const client = new OrdinalsClient("regtest");
+     * const outpoints: string[] = "enter_outpoints_here";
+     * const outputs = await client.getOutputsFromOutPoints(outpoints);
+     * console.log("Outputs:", outputs);
+     * ```
+     */
+    getOutputsFromOutPoints(outpoints: string[]): Promise<OutputJson[]> {
+        // https://docs.ordinals.com/guides/api.html#description-19
+        return this.postJson<OutputJson[]>(`${this.basePath}/outputs`, outpoints);
     }
 
     /**
@@ -551,7 +569,25 @@ export class OrdinalsClient {
         if (!response.ok) {
             throw new Error(response.statusText);
         }
-        return (await response.json()) as Promise<T>;
+        return response.json() as Promise<T>;
+    }
+
+    /**
+     * @ignore
+     */
+    private async postJson<T>(url: string, body: object): Promise<T> {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            throw new Error(response.statusText);
+        }
+        return response.json() as Promise<T>;
     }
 
     /**
