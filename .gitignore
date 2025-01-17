@@ -41,3 +41,9 @@ node_modules/*
 
 # generated docs
 /docs/docs/api/*
+
+# Rust stuff
+/target
+out/
+cache/
+Cargo.lock

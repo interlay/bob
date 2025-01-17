@@ -1,15 +1,15 @@
 [submodule "lib/forge-std"]
-	path = lib/forge-std
+	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
 [submodule "lib/openzeppelin-contracts"]
-	path = lib/openzeppelin-contracts
+	path = contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "lib/bitcoin-spv"]
-	path = lib/bitcoin-spv
+	path = contracts/lib/bitcoin-spv
 	url = https://github.com/bob-collective/bitcoin-spv
 [submodule "lib/account-abstraction"]
-	path = lib/account-abstraction
+	path = contracts/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
 [submodule "lib/gsn"]
-	path = lib/gsn
+	path = contracts/lib/gsn
 	url = https://github.com/opengsn/gsn

@@ -1,5 +1,8 @@
 [profile.default]
-fs_permissions = [{ access = "read", path = "./optimized-out" }, { access = "read", path = "./test/fullRelay/testData/" }]
+fs_permissions = [
+    { access = "read", path = "./optimized-out" },
+    { access = "read", path = "./test/fullRelay/testData/" },
+]
 src = "src"
 out = "out"
 libs = ["lib"]

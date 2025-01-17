@@ -1,0 +1,24 @@
+[package]
+name = "relayer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bindings.workspace = true
+eyre = "0.6"
+tokio = { version = "1.19", features = ["macros", "rt-multi-thread"] }
+alloy = { git = "https://github.com/alloy-rs/alloy", features = [
+    "full",
+    "providers",
+    "node-bindings",
+] }
+bitcoin = { version = "0.30.0", features = ["serde"] }
+bitcoincore-rpc = "0.17"
+serde = "1.0.139"
+serde_json = "1.0.82"
+tracing = "0.1.0"
+reqwest = "0.11.11"
+hex = "0.4.3"
+thiserror = "1.0.58"
+futures = "0.3"
+clap = { version = "4", features = ["derive", "env"] }
