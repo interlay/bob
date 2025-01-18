@@ -8,7 +8,7 @@ This website is built using [Docusaurus 2](https://docusaurus.io/), a modern sta
 $ yarn
 ```
 
-You also need to run `yarn` in the `/sdk` root folder (required for the the automatic generation of the API documentation).  
+You also need to run `yarn` in the `/sdk` root folder (required for the automatic generation of the API documentation).  
 
 ### Local Development
 
